@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/kubustack.svg" width="96" alt=""></p>
+
 # KUBUSTACK
 
 A super-lightweight native Linux desktop app for viewing and managing your Docker containers
@@ -67,6 +69,11 @@ kubustack --check    Check the Docker connection without opening a window
 kubustack --version  Print the version
 kubustack --help     Print help
 ```
+
+**Light or dark:** KUBUSTACK follows your desktop's dark-mode preference at startup (the
+freedesktop color-scheme setting used by GNOME, KDE and Cinnamon, or a GTK theme with
+"dark" in its name). Restart it after switching. To force one, set
+`KUBUSTACK_THEME=dark` or `KUBUSTACK_THEME=light`.
 
 ## Docker access
 

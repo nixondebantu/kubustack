@@ -346,8 +346,8 @@ them, including edge cases (null `RepoTags`, no ports, IPv4+IPv6 duplicate ports
 - Window X class `kubustack` (matches `StartupWMClass` in the desktop entry).
 - Window icon from the embedded `assets/kubustack.svg` via `fltk::image::SvgImage`
   (`include_str!`), so no extra files are needed at runtime.
-- Flat look drawn by FLTK itself (`src/ui/theme.rs`): `Base` scheme, light palette with the
-  icon's blue as accent, rounded borders replacing raised/sunken boxes, taller list rows,
+- Flat look drawn by FLTK itself (`src/ui/theme.rs`): `Base` scheme, light or dark palette
+  (decision #34) with the icon's cyan as accent, soft tinted row selection, rounded borders replacing raised/sunken boxes, taller list rows,
   a coloured status dot, dark logs console. System default fonts, no images in lists.
 - Layout: `Tabs` filling the window above a one-line status bar. Each tab has a button row
   on top and a list filling the rest. Use `fltk::group::Flex` for layout.
@@ -598,5 +598,7 @@ remote hosts, settings file.
 | 31 | Auto-recover | Events reconnect restores the connection | When Docker comes back, the listener notices first, so the error panel clears without pressing Retry |
 | 32 | Column widths | Fractions of the list width, re-fitted on window resize | Columns use the space at any window size; the last column (Created) takes the rest |
 | 33 | Look (replaces #9, #22) | Custom flat theme on FLTK's `Base` scheme via box-type callbacks and palette | Owner found the stock schemes dated. Costs +17 KB binary, no new crates, same RAM/CPU; a different toolkit would cost megabytes |
+| 34 | Dark mode | Follow the desktop at startup: `KUBUSTACK_THEME` override, `GTK_THEME`, freedesktop portal `color-scheme` via `gdbus`, then a `*dark*` GTK theme name via `gsettings` | No D-Bus crate; one or two short commands at startup (+34 KB binary for `std::process`). No live switching, restart instead. The env var is not a config file |
+| 35 | Icon | Owner's hexagon-cube logo, hand-traced to a 447-byte SVG on a dark rounded square | Crisp at any size, works on light and dark panels, no raster image in the binary |
 | — | M8 measurements | **macOS** (arm64, OrbStack, 18 containers): binary 1.34 MB; idle CPU ~0% (0.06 s over 30 s); first populated list 380–580 ms, of which ~250 ms is OrbStack answering the three API calls; RSS not comparable. **Linux** (50 containers, `ldd`, RSS, startup): _pending, owner measures_ | Measured during M8 |
 | — | Spike results | **Linux** (Mint, X11, x86_64, fltk 1.5.23): default build 1.18 MB stripped; `ldd` lists 46 stock desktop libs (X11/Xft/fontconfig/freetype, pango/cairo/harfbuzz/glib), no extras. `no-pango` build: 1.20 MB, 25 libs, RSS 8.8 MB, CPU 0.1% (lifetime average incl. startup). Default-build RSS not captured, re-measured in M8. **macOS** (arm64): 1.06 MB, idle CPU 0.0% | Measured during M1 |

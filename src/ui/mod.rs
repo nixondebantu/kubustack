@@ -45,11 +45,11 @@ pub fn header(columns: &[i32], titles: &[&str]) -> Browser {
     h
 }
 
-/// Styles a list: white with a thin border, accent selection.
+/// Styles a list: surface color, thin border, soft selection tint.
 pub fn style_list(list: &mut HoldBrowser, columns: &[i32]) {
     list.set_frame(FrameType::ThinDownBox);
     list.set_color(theme::SURFACE);
-    list.set_selection_color(theme::ACCENT);
+    list.set_selection_color(theme::SELECTION);
     list.set_column_widths(&theme::with_pad(columns));
 }
 
