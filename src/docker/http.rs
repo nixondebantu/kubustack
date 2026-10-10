@@ -172,10 +172,11 @@ fn api_error(status: u16, body: &[u8]) -> DockerError {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
 
-    fn parse(raw: &[u8]) -> Result<Vec<u8>, DockerError> {
+    /// Parses a raw HTTP response (used by fixture tests in other modules too).
+    pub fn parse(raw: &[u8]) -> Result<Vec<u8>, DockerError> {
         let mut r: &[u8] = raw;
         read_response(&mut r).map_err(|e| io_or(e, Path::new("/test.sock")))
     }
@@ -245,6 +246,13 @@ mod tests {
         assert_eq!(parse(raw).unwrap(), b"OK");
         let short = b"HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nOK";
         assert!(matches!(parse(short), Err(DockerError::Parse(_))));
+    }
+
+    #[test]
+    fn real_chunked_fixture() {
+        // OrbStack answers HTTP/1.0 requests with chunked bodies.
+        let body = parse(include_bytes!("../../tests/fixtures/containers.http")).unwrap();
+        assert!(body.starts_with(b"[{") && body.trim_ascii_end().ends_with(b"}]"));
     }
 
     #[test]

@@ -122,8 +122,8 @@ pub enum Msg {
 }
 ```
 
-UI widget callbacks call plain handler functions on the main thread; they do not need to go
-through the channel.
+UI widget callbacks send `Msg` values through the same channel (e.g. `Msg::Refresh`), so all
+state lives in one struct handled by one `match`, with no `Rc<RefCell>` (§14 #27).
 
 ## 6. Project structure
 
@@ -183,8 +183,9 @@ The README documents Podman use:
 ### 7.2 HTTP client (`docker/http.rs`)
 
 Each request opens a new `UnixStream`, writes the request, and reads the response.
-HTTP/1.0 is used so that responses are not chunked and the server closes the connection
-when done, which keeps parsing trivial.
+HTTP/1.0 is used to keep parsing simple. Docker itself then sends plain bodies, but OrbStack's
+socket proxy answers with chunked bodies anyway (§14 #26), so whole responses are de-chunked and
+streams (logs, events) need a de-chunking reader.
 
 Request format:
 
@@ -241,8 +242,7 @@ Each variant has a user-facing message (`impl Display`):
 
 | Purpose | Method and path | Success | Notes |
 |---|---|---|---|
-| Health check | `GET /_ping` | 200 `OK` | On startup and on Retry |
-| Version | `GET /version` | 200 | Shown in status bar |
+| Version / health check | `GET /version` | 200 | On startup and on Retry; version shown in status bar (§14 #25) |
 | List containers | `GET /containers/json?all=1` | 200 | |
 | Inspect container | `GET /containers/{id}/json` | 200 | Only to read `Config.Tty` for logs |
 | Start | `POST /containers/{id}/start` | 204, 304 | 304 = already running, treat as success |
@@ -583,4 +583,8 @@ remote hosts, settings file.
 | 22 | FLTK scheme | `Gtk` | Flatter and cleaner than `Gleam` (whose gradient borders look dated) in the M1 spike screenshots |
 | 23 | fltk features | Default features only: no `use-wayland`, no `no-pango` | `no-pango` rendered `→` and CJK as boxes (the ports column needs `→`) and was not smaller (1.20 MB vs 1.18 MB). `use-wayland` needs extra build packages and could not be verified on a Wayland session; XWayland covers Wayland desktops |
 | 24 | HTTP framing | Send `Connection: close` and honor `Content-Length` | OrbStack's socket proxy keeps HTTP/1.0 connections open, so reading to EOF hung until the timeout (found in M2) |
+| 25 | Health check | `GET /version` instead of `/_ping` + `/version` | One request proves the connection and gives the version for the status bar |
+| 26 | Chunked replies | De-chunk whole bodies; streams need a de-chunking reader (M6/M7) | OrbStack sends `Transfer-Encoding: chunked` even to HTTP/1.0 requests (found in M3) |
+| 27 | UI events | Widget callbacks send `Msg` through the channel | One state struct and one dispatch `match`, no shared `Rc<RefCell>` |
+| 28 | Port model | No `IP` field | Never displayed; IPv4/IPv6 duplicates are merged by port and type |
 | — | Spike results | **Linux** (Mint, X11, x86_64, fltk 1.5.23): default build 1.18 MB stripped; `ldd` lists 46 stock desktop libs (X11/Xft/fontconfig/freetype, pango/cairo/harfbuzz/glib), no extras. `no-pango` build: 1.20 MB, 25 libs, RSS 8.8 MB, CPU 0.1% (lifetime average incl. startup). Default-build RSS not captured, re-measured in M8. **macOS** (arm64): 1.06 MB, idle CPU 0.0% | Measured during M1 |

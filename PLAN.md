@@ -64,17 +64,17 @@ when the socket path is wrong (`DOCKER_HOST=unix:///nope.sock`).
 
 ## M3 — Containers list (read-only)
 
-- [ ] `ContainerSummary` and `Port` models with fixture tests [§7.5]
-- [ ] `api::ping()` and `api::list_containers()`
-- [ ] `format.rs`: relative time, ports formatting with IPv4/IPv6 merge, name stripping,
+- [x] `ContainerSummary` and `Port` models with fixture tests [§7.5]
+- [x] `api::list_containers()` (`/version` doubles as the health check, §14 #25)
+- [x] `format.rs`: relative time, ports formatting with IPv4/IPv6 merge, name stripping,
       truncation with `…`, with unit tests
-- [ ] `msg.rs`, `worker.rs`, and the main loop draining `app::channel` [§5]
-- [ ] Containers tab list with header, columns, sorting, green running status [§8.2, §8.3]
-- [ ] Refresh button and F5; refresh coalescing [§5]
-- [ ] Status bar connected text with counts [§8.6]
-- [ ] Error panel with Retry when Docker is unreachable [§8.6]
-- [ ] Selection kept by ID across refreshes; empty state text
-- [ ] `--check` now also prints container and image counts
+- [x] `msg.rs`, `worker.rs`, and the main loop draining `app::channel` [§5]
+- [x] Containers tab list with header, columns, sorting, green running status [§8.2, §8.3]
+- [x] Refresh button and F5; refresh coalescing [§5]
+- [x] Status bar connected text with counts [§8.6]
+- [x] Error panel with Retry when Docker is unreachable [§8.6]
+- [x] Selection kept by ID across refreshes; empty state text
+- [x] `--check` now also prints container and image counts
 
 **Done when:** the list matches `docker ps -a`, refreshing never freezes the window, and
 stopping/starting Docker shows the error panel and Retry recovers.
