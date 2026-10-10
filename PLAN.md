@@ -44,17 +44,17 @@ user has approved the feature choice.
 
 ## M2 — Docker client core
 
-- [ ] `DockerError` with user-facing `Display` messages [§7.3]
-- [ ] Socket discovery with `DOCKER_HOST` parsing [§7.1], written so paths and env values can be
+- [x] `DockerError` with user-facing `Display` messages [§7.3]
+- [x] Socket discovery with `DOCKER_HOST` parsing [§7.1], written so paths and env values can be
       injected in tests
-- [ ] `http.rs`: `request` and `stream`, response parser, chunked decoder, timeouts,
-      URL-encode helper [§7.2]
-- [ ] `models.rs`: `VersionInfo` (others can come with their milestones)
-- [ ] `api.rs`: `ping()`, `version()`
-- [ ] CLI: `--version`, `--help`, `--check` [§9] (`--check` prints the first two lines for now)
-- [ ] Unit tests: response parsing (200 with body, 204 empty, error JSON), chunked decoding,
-      `DOCKER_HOST` parsing, discovery order, URL-encoding
-- [ ] Save raw fixtures captured from the local daemon into `tests/fixtures/`
+- [x] `http.rs`: `request`, response parser, chunked decoder, timeouts [§7.2]. `stream` moved
+      to M6 and the URL-encode helper to M5, where each is first used (no dead code)
+- [x] `models.rs`: `VersionInfo` (others can come with their milestones)
+- [x] `api.rs`: `version()` (`ping()` moved to M3, where the GUI first uses it)
+- [x] CLI: `--version`, `--help`, `--check` [§9] (`--check` prints the first two lines for now)
+- [x] Unit tests: response parsing (200 with body, 204 empty, error JSON), chunked decoding,
+      `DOCKER_HOST` parsing, discovery order (URL-encoding tests move to M5 with the helper)
+- [x] Save raw fixtures captured from the local daemon into `tests/fixtures/`
 
 **Done when:** `cargo run -- --check` prints socket and Docker version, and prints the correct
 friendly error when Docker is stopped (`sudo systemctl stop docker`, ask the user first) or
@@ -65,7 +65,7 @@ when the socket path is wrong (`DOCKER_HOST=unix:///nope.sock`).
 ## M3 — Containers list (read-only)
 
 - [ ] `ContainerSummary` and `Port` models with fixture tests [§7.5]
-- [ ] `api::list_containers()`
+- [ ] `api::ping()` and `api::list_containers()`
 - [ ] `format.rs`: relative time, ports formatting with IPv4/IPv6 merge, name stripping,
       truncation with `…`, with unit tests
 - [ ] `msg.rs`, `worker.rs`, and the main loop draining `app::channel` [§5]
@@ -98,7 +98,8 @@ stopping/starting Docker shows the error panel and Retry recovers.
 ## M5 — Images tab
 
 - [ ] `ImageSummary` model with fixture tests, including null `RepoTags` [§7.5]
-- [ ] `api::list_images`, `remove_image`, `prune_images(dangling_only)`
+- [ ] `api::list_images`, `remove_image`, `prune_images(dangling_only)`; URL-encode helper for
+      the `filters` JSON, with tests [§7.2]
 - [ ] Size formatting (base 1000, like the Docker CLI) with tests
 - [ ] Images list: one row per tag, short ID, sorting, `<none>` last [§8.4]
 - [ ] Remove with confirmation; 409 shows Docker's message
@@ -111,7 +112,7 @@ and removing an in-use image shows the conflict message. Test prune only after a
 
 ## M6 — Live updates via events
 
-- [ ] `events.rs` listener thread using the streaming JSON deserializer [§7.7]
+- [ ] `http::stream` [§7.2]; `events.rs` listener thread using the streaming JSON deserializer [§7.7]
 - [ ] Debounced refresh on the main thread with `app::add_timeout3`
 - [ ] Reconnect with backoff; "live updates paused" status suffix; full refresh on reconnect
 - [ ] Remove the explicit post-action refreshes from M4 if events now cover them (keep them if

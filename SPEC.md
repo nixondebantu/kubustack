@@ -192,17 +192,21 @@ Request format:
 {METHOD} {PATH} HTTP/1.0\r\n
 Host: docker\r\n
 User-Agent: kubustack/{CARGO_PKG_VERSION}\r\n
+Connection: close\r\n
 Content-Length: 0\r\n          (POST and DELETE only)
 \r\n
 ```
 
 - Paths are unversioned (e.g. `/containers/json`), so the daemon uses its own API version.
 - Two entry points:
-  - `request(method, path, timeout) -> Result<Response, DockerError>`: reads the whole body.
-    `Response { status: u16, body: Vec<u8> }`.
+  - `request(socket, method, path, timeout) -> Result<Vec<u8>, DockerError>`: returns the whole
+    body. Statuses ≥ 400 become `DockerError::Api`; 2xx and 304 are success, so callers never
+    need the status code.
   - `stream(method, path) -> Result<(u16, BufReader<UnixStream>), DockerError>`: reads the
     status line and headers, then hands back the reader positioned at the body.
-- Parsing: status line `HTTP/1.x NNN reason`, headers until the empty line, body is the rest.
+- Parsing: status line `HTTP/1.x NNN reason`, headers until the empty line. The body is exactly
+  `Content-Length` bytes when that header is present, otherwise everything until the server
+  closes the connection.
 - Defensive: if a `Transfer-Encoding: chunked` header is present, de-chunk the body. This is a
   small, unit-tested function.
 - Timeouts via `set_read_timeout`: 15 s for list/inspect calls, 60 s for stop/restart (Docker
@@ -578,4 +582,5 @@ remote hosts, settings file.
 | 21 | Dev machine | macOS arm64 (OrbStack Docker); Linux checks run by owner later | Owner's machine. FLTK runs on macOS, so UI work is testable; Linux-only checks (`ldd`, Wayland, size/RSS budget) need a Linux desktop |
 | 22 | FLTK scheme | `Gtk` | Flatter and cleaner than `Gleam` (whose gradient borders look dated) in the M1 spike screenshots |
 | 23 | fltk features | Default features only: no `use-wayland`, no `no-pango` | `no-pango` rendered `→` and CJK as boxes (the ports column needs `→`) and was not smaller (1.20 MB vs 1.18 MB). `use-wayland` needs extra build packages and could not be verified on a Wayland session; XWayland covers Wayland desktops |
+| 24 | HTTP framing | Send `Connection: close` and honor `Content-Length` | OrbStack's socket proxy keeps HTTP/1.0 connections open, so reading to EOF hung until the timeout (found in M2) |
 | — | Spike results | **Linux** (Mint, X11, x86_64, fltk 1.5.23): default build 1.18 MB stripped; `ldd` lists 46 stock desktop libs (X11/Xft/fontconfig/freetype, pango/cairo/harfbuzz/glib), no extras. `no-pango` build: 1.20 MB, 25 libs, RSS 8.8 MB, CPU 0.1% (lifetime average incl. startup). Default-build RSS not captured, re-measured in M8. **macOS** (arm64): 1.06 MB, idle CPU 0.0% | Measured during M1 |

@@ -1,0 +1,10 @@
+HTTP/1.1 404 Not Found
+Api-Version: 1.54
+Content-Length: 56
+Content-Type: application/json
+Date: Sat, 10 Oct 2026 09:04:27 GMT
+Docker-Experimental: true
+Ostype: linux
+Server: Docker/29.4.0 (linux)
+
+{"message":"No such container: kubustack-test-missing"}
