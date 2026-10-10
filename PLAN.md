@@ -126,14 +126,14 @@ at ~0%, and restarting the Docker service recovers live updates.
 
 ## M7 — Logs window
 
-- [ ] `api::inspect_tty`, `api::logs(follow)` returning a stream [§7.4]
-- [ ] Stateful demuxer and UTF-8 carry-over in `logs.rs`, with split-at-every-byte tests [§7.6]
-- [ ] `format::strip_ansi` with tests
-- [ ] Logs window: monospace text, auto-scroll, Follow checkbox, Close [§8.5]
-- [ ] Stop following via socket `shutdown` on toggle-off and on window close
-- [ ] 6000→5000 line trimming
-- [ ] Focus an existing window instead of opening a duplicate
-- [ ] Open via Logs button, double-click, and Enter [§8.7]
+- [x] `api::inspect_tty`, `api::logs(follow)` returning a stream [§7.4]
+- [x] Stateful demuxer and UTF-8 carry-over in `logs.rs`, with split-at-every-byte tests [§7.6]
+- [x] `format::strip_ansi` with tests
+- [x] Logs window: monospace text, auto-scroll, Follow checkbox, Close [§8.5]
+- [x] Stop following via socket `shutdown` on toggle-off and on window close
+- [x] 6000→5000 line trimming
+- [x] Focus an existing window instead of opening a duplicate
+- [x] Open via Logs button, double-click, and Enter [§8.7]
 
 **Done when:** logs match `docker logs --tail 500` for both a TTY container
 (`docker run -dt ...`) and a non-TTY one, follow shows new lines live, and closing the window

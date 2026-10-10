@@ -47,6 +47,12 @@ impl MainWindow {
                 s.send(Msg::DeleteKey);
                 true
             }
+            Event::KeyDown | Event::Shortcut
+                if matches!(app::event_key(), Key::Enter | Key::KPEnter) =>
+            {
+                s.send(Msg::EnterKey);
+                true
+            }
             _ => false,
         });
         // FLTK closes windows on Escape by default; only quit on a real close.

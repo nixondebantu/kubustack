@@ -76,6 +76,45 @@ pub fn size(bytes: i64) -> String {
     }
 }
 
+/// Removes ANSI escape sequences (colors, cursor moves, titles), carriage returns and other
+/// control characters except newline and tab.
+pub fn strip_ansi(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            '\x1b' => match chars.next() {
+                // CSI: ESC [ params... final byte in @..~
+                Some('[') => {
+                    for c in chars.by_ref() {
+                        if ('@'..='~').contains(&c) {
+                            break;
+                        }
+                    }
+                }
+                // OSC: ESC ] ... ended by BEL or ESC \
+                Some(']') => {
+                    while let Some(c) = chars.next() {
+                        if c == '\x07' || (c == '\x1b' && chars.next_if_eq(&'\\').is_some()) {
+                            break;
+                        }
+                    }
+                }
+                // nF escapes like ESC ( B: intermediate bytes, then one final byte
+                Some(' '..='/') => {
+                    while chars.next_if(|c| (' '..='/').contains(c)).is_some() {}
+                    chars.next();
+                }
+                _ => {} // two-character escape
+            },
+            '\n' | '\t' => out.push(c),
+            c if c.is_control() => {}
+            c => out.push(c),
+        }
+    }
+    out
+}
+
 /// Escapes `@` so FLTK labels show it literally instead of as a symbol.
 pub fn label(s: &str) -> String {
     s.replace('@', "@@")
@@ -141,6 +180,16 @@ mod tests {
         assert_eq!(size(1_234_000_000), "1.2 GB");
         assert_eq!(size(5_000_000_000_000_000), "5000.0 TB");
         assert_eq!(size(-5), "0 B");
+    }
+
+    #[test]
+    fn strips_ansi() {
+        assert_eq!(strip_ansi("\x1b[1;31mred\x1b[0m plain"), "red plain");
+        assert_eq!(strip_ansi("\x1b]0;title\x07after"), "after");
+        assert_eq!(strip_ansi("\x1b]8;;http://x\x1b\\link"), "link");
+        assert_eq!(strip_ansi("line\r\nnext\ttab\x08"), "line\nnext\ttab");
+        assert_eq!(strip_ansi("\x1b(Bok ünï ✓"), "ok ünï ✓");
+        assert_eq!(strip_ansi("cut\x1b[3"), "cut");
     }
 
     #[test]

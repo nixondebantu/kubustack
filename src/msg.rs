@@ -2,6 +2,7 @@
 
 use crate::docker::models::{ContainerSummary, ImageSummary, VersionInfo};
 use crate::docker::DockerError;
+use std::os::unix::net::UnixStream;
 use std::path::PathBuf;
 
 pub enum Msg {
@@ -13,6 +14,22 @@ pub enum Msg {
     ActionDone {
         failed: String,
         result: Result<String, DockerError>,
+    },
+    // from log reader threads
+    LogText {
+        window: u32,
+        text: String,
+    },
+    /// A follow stream started; `handle` stops it.
+    LogFollowing {
+        window: u32,
+        stream: u32,
+        handle: UnixStream,
+    },
+    LogEnded {
+        window: u32,
+        stream: u32,
+        error: Option<DockerError>,
     },
     // from the events listener
     DockerEvent(Scope),
@@ -29,6 +46,15 @@ pub enum Msg {
     RemoveImage,
     PruneImages,
     DeleteKey,
+    EnterKey,
+    OpenLogs,
+    LogFollow {
+        window: u32,
+        on: bool,
+    },
+    LogClose {
+        window: u32,
+    },
 }
 
 #[derive(Clone, Copy)]

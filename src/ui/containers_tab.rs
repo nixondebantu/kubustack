@@ -16,6 +16,7 @@ pub struct ContainersTab {
     stop: Button,
     restart: Button,
     remove: Button,
+    logs: Button,
     list: HoldBrowser,
     rows: Vec<ContainerSummary>,
     selected: Option<String>,
@@ -39,6 +40,10 @@ impl ContainersTab {
         let stop = action("Stop", Action::Stop);
         let restart = action("Restart", Action::Restart);
         let remove = action("Remove", Action::Remove);
+        let mut logs = Button::default().with_label("Logs");
+        logs.set_callback(move |_| s.send(Msg::OpenLogs));
+        logs.deactivate();
+        buttons.fixed(&logs, 80);
         Frame::default();
         let mut refresh = Button::default().with_label("Refresh");
         refresh.set_callback(move |_| s.send(Msg::Refresh));
@@ -51,7 +56,12 @@ impl ContainersTab {
 
         let mut list = HoldBrowser::default();
         list.set_column_widths(&COLUMNS);
-        list.set_callback(move |_| s.send(Msg::ContainerSelected));
+        list.set_callback(move |_| {
+            s.send(Msg::ContainerSelected);
+            if fltk::app::event_clicks() {
+                s.send(Msg::OpenLogs);
+            }
+        });
         col.end();
 
         ContainersTab {
@@ -59,6 +69,7 @@ impl ContainersTab {
             stop,
             restart,
             remove,
+            logs,
             list,
             rows: Vec::new(),
             selected: None,
@@ -108,6 +119,7 @@ impl ContainersTab {
             (&mut self.stop, running),
             (&mut self.restart, running),
             (&mut self.remove, any),
+            (&mut self.logs, any),
         ] {
             if on {
                 b.activate();

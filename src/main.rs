@@ -11,7 +11,7 @@ use fltk::app::{self, Sender};
 use msg::{Action, Msg, Scope};
 use std::path::PathBuf;
 use std::process::ExitCode;
-use ui::{dialogs, main_window::MainWindow};
+use ui::{dialogs, logs_window::LogsWindow, main_window::MainWindow};
 use worker::Refresh;
 
 const USAGE: &str = "\
@@ -61,6 +61,8 @@ fn run_gui() -> ExitCode {
         events_down: false,
         dirty: (false, false),
         settling: false,
+        logs: Vec::new(),
+        next_id: 1,
         containers_refresh: Refresh::default(),
         images_refresh: Refresh::default(),
     };
@@ -91,6 +93,9 @@ struct App {
     dirty: (bool, bool),
     /// A debounce timer is pending.
     settling: bool,
+    logs: Vec<LogsWindow>,
+    /// Source of logs window and log stream IDs.
+    next_id: u32,
     containers_refresh: Refresh,
     images_refresh: Refresh,
 }
@@ -186,6 +191,60 @@ impl App {
                     self.update_status();
                 }
             }
+            Msg::EnterKey if self.ui.active_tab().as_deref() == Some("Containers") => {
+                self.open_logs()
+            }
+            Msg::EnterKey => {}
+            Msg::OpenLogs => self.open_logs(),
+            Msg::LogText { window, text } => {
+                if let Some(w) = self.logs_window(window) {
+                    w.append(&text);
+                }
+            }
+            Msg::LogFollowing {
+                window,
+                stream,
+                handle,
+            } => match self.logs_window(window) {
+                Some(w) => w.take_handle(stream, handle),
+                None => drop(handle.shutdown(std::net::Shutdown::Both)),
+            },
+            Msg::LogEnded {
+                window,
+                stream,
+                error,
+            } => {
+                if let Some(w) = self.logs_window(window) {
+                    let current = w.follow_stream == Some(stream);
+                    if current {
+                        w.follow_ended();
+                    }
+                    // Errors from streams we stopped ourselves are expected; don't show them.
+                    if let (Some(e), true) = (error, current || stream == w.load_stream) {
+                        w.append(&format!("\n--- Couldn't read logs: {e} ---\n"));
+                    }
+                }
+            }
+            Msg::LogFollow { window, on } => {
+                let id = self.new_id();
+                let socket = self.socket.clone();
+                if let Some(w) = self.logs_window(window) {
+                    match (on, socket) {
+                        (true, Some(socket)) => {
+                            w.follow_stream = Some(id);
+                            let container = w.container_id.clone();
+                            docker::logs::spawn_reader(socket, container, true, window, id, self.s);
+                        }
+                        (true, None) => w.follow_ended(),
+                        (false, _) => w.stop_follow(),
+                    }
+                }
+            }
+            Msg::LogClose { window } => {
+                if let Some(i) = self.logs.iter().position(|w| w.id == window) {
+                    self.logs.swap_remove(i).close();
+                }
+            }
             Msg::ImageSelected => self.ui.images.on_select(),
             Msg::RemoveImage => self.remove_image(),
             Msg::PruneImages => self.prune_images(),
@@ -252,6 +311,40 @@ impl App {
                 result: result.map(|()| format!("{done} {name}")),
             }
         });
+    }
+
+    fn new_id(&mut self) -> u32 {
+        self.next_id += 1;
+        self.next_id
+    }
+
+    fn logs_window(&mut self, id: u32) -> Option<&mut LogsWindow> {
+        self.logs.iter_mut().find(|w| w.id == id)
+    }
+
+    /// Opens (or focuses) the logs window of the selected container and loads its last 500 lines.
+    fn open_logs(&mut self) {
+        let Some(socket) = self.socket.clone() else {
+            return;
+        };
+        let Some(c) = self.ui.containers.selected() else {
+            return;
+        };
+        let container = c.id.clone();
+        let name = format::container_name(&c.names, &c.id);
+        if let Some(w) = self.logs.iter_mut().find(|w| w.container_id == container) {
+            w.focus();
+            return;
+        }
+        let (window, stream) = (self.new_id(), self.new_id());
+        self.logs.push(LogsWindow::new(
+            window,
+            container.clone(),
+            &name,
+            stream,
+            self.s,
+        ));
+        docker::logs::spawn_reader(socket, container, false, window, stream, self.s);
     }
 
     /// Removes the selected image (untags it, or deletes an untagged image by ID) after confirming.

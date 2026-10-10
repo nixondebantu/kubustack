@@ -32,7 +32,7 @@ pub fn spawn_listener(socket: PathBuf, s: Sender<Msg>) {
         let mut backoff = 2;
         loop {
             let started = Instant::now();
-            if let Ok(body) = stream(&socket, "GET", &path) {
+            if let Ok((body, _)) = stream(&socket, "GET", &path) {
                 s.send(Msg::EventsConnected);
                 let events = serde_json::Deserializer::from_reader(body).into_iter::<Event>();
                 for ev in events {

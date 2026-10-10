@@ -43,6 +43,20 @@ pub struct ImageSummary {
     pub created: i64,
 }
 
+/// The part of `GET /containers/{id}/json` we need.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct ContainerInspect {
+    pub config: ContainerConfig,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct ContainerConfig {
+    #[serde(default)]
+    pub tty: bool,
+}
+
 /// Result of `POST /images/prune`.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]

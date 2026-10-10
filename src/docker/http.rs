@@ -20,24 +20,29 @@ pub fn request(
 }
 
 /// Sends a request and returns a reader over the body (de-chunked if needed), with no read
-/// timeout. Statuses >= 400 become `DockerError::Api`.
+/// timeout, plus a handle to the socket: `shutdown` on it unblocks the reader.
+/// Statuses >= 400 become `DockerError::Api`.
 pub fn stream(
     socket: &Path,
     method: &str,
     path: &str,
-) -> Result<Box<dyn Read + Send>, DockerError> {
+) -> Result<(Box<dyn Read + Send>, UnixStream), DockerError> {
     let stream = connect(socket, method, path, None)?;
+    let handle = stream
+        .try_clone()
+        .map_err(|e| DockerError::from_io(e, socket))?;
     let mut reader = BufReader::new(stream);
     let head = read_head(&mut reader).map_err(|e| io_or(e, socket))?;
     if head.status >= 400 {
         let body = read_body(&mut reader, &head).map_err(|e| io_or(e, socket))?;
         return Err(api_error(head.status, &body));
     }
-    Ok(if head.chunked {
+    let body: Box<dyn Read + Send> = if head.chunked {
         Box::new(Chunked::new(reader))
     } else {
         Box::new(reader)
-    })
+    };
+    Ok((body, handle))
 }
 
 fn connect(

@@ -1,9 +1,11 @@
 //! Typed functions, one per Docker Engine API endpoint.
 
-use super::http::{encode, request};
-use super::models::{ContainerSummary, ImageSummary, PruneReport, VersionInfo};
+use super::http::{encode, request, stream};
+use super::models::{ContainerInspect, ContainerSummary, ImageSummary, PruneReport, VersionInfo};
 use super::DockerError;
 use serde::de::DeserializeOwned;
+use std::io::Read;
+use std::os::unix::net::UnixStream;
 use std::path::Path;
 use std::time::Duration;
 
@@ -69,4 +71,27 @@ pub fn prune_images(socket: &Path, dangling_only: bool) -> Result<PruneReport, D
     let path = format!("/images/prune?filters={}", encode(&filters));
     let body = request(socket, "POST", &path, Duration::from_secs(120))?;
     serde_json::from_slice(&body).map_err(|e| DockerError::Parse(e.to_string()))
+}
+
+/// Whether the container was created with a TTY (`Config.Tty`), which decides the log format.
+pub fn inspect_tty(socket: &Path, id: &str) -> Result<bool, DockerError> {
+    get_json::<ContainerInspect>(socket, &format!("/containers/{id}/json")).map(|c| c.config.tty)
+}
+
+/// Log stream: the last 500 lines, or with `follow` only new lines until stopped.
+pub fn logs(
+    socket: &Path,
+    id: &str,
+    follow: bool,
+) -> Result<(Box<dyn Read + Send>, UnixStream), DockerError> {
+    let tail = if follow {
+        "follow=1&tail=0"
+    } else {
+        "tail=500"
+    };
+    stream(
+        socket,
+        "GET",
+        &format!("/containers/{id}/logs?stdout=1&stderr=1&{tail}"),
+    )
 }
