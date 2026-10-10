@@ -41,6 +41,10 @@ impl MainWindow {
                 s.send(Msg::Refresh);
                 true
             }
+            Event::KeyDown | Event::Shortcut if app::event_key() == Key::Delete => {
+                s.send(Msg::DeleteKey);
+                true
+            }
             _ => false,
         });
         // FLTK closes windows on Escape by default; only quit on a real close.
@@ -107,6 +111,11 @@ impl MainWindow {
         self.tabs.hide();
         self.error_panel.show();
         self.col.layout();
+    }
+
+    pub fn containers_tab_active(&self) -> bool {
+        // ponytail: matches by tab label; fine while tab names are fixed.
+        self.tabs.visible() && self.tabs.value().is_some_and(|g| g.label() == "Containers")
     }
 
     pub fn show_tabs(&mut self) {

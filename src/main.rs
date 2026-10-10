@@ -8,10 +8,10 @@ mod worker;
 
 use docker::{api, DockerError};
 use fltk::app::{self, Sender};
-use msg::Msg;
+use msg::{Action, Msg};
 use std::path::PathBuf;
 use std::process::ExitCode;
-use ui::main_window::MainWindow;
+use ui::{dialogs, main_window::MainWindow};
 use worker::Refresh;
 
 const USAGE: &str = "\
@@ -56,6 +56,7 @@ fn run_gui() -> ExitCode {
         socket: None,
         version: String::new(),
         image_count: None,
+        note: None,
         containers_refresh: Refresh::default(),
         images_refresh: Refresh::default(),
     };
@@ -76,6 +77,8 @@ struct App {
     socket: Option<PathBuf>,
     version: String,
     image_count: Option<usize>,
+    /// Last action progress or result, appended to the status bar until the next Refresh.
+    note: Option<String>,
     containers_refresh: Refresh,
     images_refresh: Refresh,
 }
@@ -90,7 +93,10 @@ impl App {
                 self.refresh_all();
             }
             Msg::Connected(Err(e)) => self.disconnected(e),
-            Msg::Refresh => self.refresh_all(),
+            Msg::Refresh => {
+                self.note = None;
+                self.refresh_all();
+            }
             Msg::Retry => self.connect(),
             Msg::ContainersLoaded(result) => {
                 let again = self.containers_refresh.finish();
@@ -117,7 +123,72 @@ impl App {
                 self.update_status();
             }
             Msg::ContainerSelected => self.ui.containers.on_select(),
+            Msg::ContainerAction(a) => self.container_action(a),
+            Msg::DeleteKey if self.ui.containers_tab_active() => {
+                self.container_action(Action::Remove)
+            }
+            Msg::DeleteKey => {}
+            Msg::ActionDone {
+                done,
+                failed,
+                result,
+            } => {
+                match result {
+                    Ok(()) => self.note = Some(done),
+                    Err(e) => {
+                        self.note = Some(failed.clone());
+                        dialogs::alert(&format!("{failed}: {e}"));
+                    }
+                }
+                // ponytail: explicit refresh until M6 events cover it.
+                self.refresh_containers();
+                self.update_status();
+            }
         }
+    }
+
+    /// Runs an action on the selected container, confirming removal first.
+    fn container_action(&mut self, action: Action) {
+        let Some(socket) = self.socket.clone() else {
+            return;
+        };
+        let Some(c) = self.ui.containers.selected() else {
+            return;
+        };
+        let name = format::container_name(&c.names, &c.id);
+        let id = c.id.clone();
+        let running = c.state == "running";
+        let (doing, done, verb) = match action {
+            Action::Start => ("Starting", "Started", "start"),
+            Action::Stop => ("Stopping", "Stopped", "stop"),
+            Action::Restart => ("Restarting", "Restarted", "restart"),
+            Action::Remove => {
+                let question = if running {
+                    format!("{name} is running. Stop and remove it?")
+                } else {
+                    format!("Remove container {name}?")
+                };
+                if !dialogs::confirm(&question, "Remove") {
+                    return;
+                }
+                ("Removing", "Removed", "remove")
+            }
+        };
+        self.note = Some(format!("{doing} {name}…"));
+        self.update_status();
+        worker::spawn(self.s, move || {
+            let result = match action {
+                Action::Start => api::start(&socket, &id),
+                Action::Stop => api::stop(&socket, &id),
+                Action::Restart => api::restart(&socket, &id),
+                Action::Remove => api::remove(&socket, &id, running),
+            };
+            Msg::ActionDone {
+                done: format!("{done} {name}"),
+                failed: format!("Couldn't {verb} {name}"),
+                result,
+            }
+        });
     }
 
     fn connect(&mut self) {
@@ -162,6 +233,9 @@ impl App {
     }
 
     fn update_status(&mut self) {
+        if self.socket.is_none() {
+            return;
+        }
         let (n, running) = self.ui.containers.counts();
         let mut text = format!(
             "Connected · Docker {} · {n} containers ({running} running)",
@@ -169,6 +243,9 @@ impl App {
         );
         if let Some(m) = self.image_count {
             text += &format!(" · {m} images");
+        }
+        if let Some(note) = &self.note {
+            text += &format!(" · {note}");
         }
         self.ui.set_status(&text);
     }

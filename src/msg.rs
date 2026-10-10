@@ -9,8 +9,23 @@ pub enum Msg {
     Connected(Result<(PathBuf, VersionInfo), DockerError>),
     ContainersLoaded(Result<Vec<ContainerSummary>, DockerError>),
     ImagesCounted(Result<usize, DockerError>),
-    // from widgets
+    ActionDone {
+        done: String,
+        failed: String,
+        result: Result<(), DockerError>,
+    },
+    // from widgets and keys
     Refresh,
     Retry,
     ContainerSelected,
+    ContainerAction(Action),
+    DeleteKey,
+}
+
+#[derive(Clone, Copy)]
+pub enum Action {
+    Start,
+    Stop,
+    Restart,
+    Remove,
 }

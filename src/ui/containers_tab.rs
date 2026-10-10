@@ -2,7 +2,7 @@
 
 use crate::docker::models::ContainerSummary;
 use crate::format;
-use crate::msg::Msg;
+use crate::msg::{Action, Msg};
 use fltk::{
     app::Sender,
     browser::{Browser, BrowserScrollbar, HoldBrowser},
@@ -20,6 +20,10 @@ const COLUMNS: [i32; 4] = [180, 220, 170, 200];
 const COLUMN_GAP: i32 = 8;
 
 pub struct ContainersTab {
+    start: Button,
+    stop: Button,
+    restart: Button,
+    remove: Button,
     list: HoldBrowser,
     rows: Vec<ContainerSummary>,
     selected: Option<String>,
@@ -32,6 +36,17 @@ impl ContainersTab {
         col.set_margin(4);
 
         let mut buttons = Flex::default().row();
+        let mut action = |label: &str, a: Action| {
+            let mut b = Button::default().with_label(label);
+            b.set_callback(move |_| s.send(Msg::ContainerAction(a)));
+            b.deactivate();
+            buttons.fixed(&b, 80);
+            b
+        };
+        let start = action("Start", Action::Start);
+        let stop = action("Stop", Action::Stop);
+        let restart = action("Restart", Action::Restart);
+        let remove = action("Remove", Action::Remove);
         Frame::default();
         let mut refresh = Button::default().with_label("Refresh");
         refresh.set_callback(move |_| s.send(Msg::Refresh));
@@ -54,6 +69,10 @@ impl ContainersTab {
         col.end();
 
         ContainersTab {
+            start,
+            stop,
+            restart,
+            remove,
             list,
             rows: Vec::new(),
             selected: None,
@@ -83,6 +102,7 @@ impl ContainersTab {
             None => self.selected = None,
         }
         self.list.set_position(scroll);
+        self.update_buttons();
     }
 
     /// Records the newly selected container after a click.
@@ -92,6 +112,31 @@ impl ContainersTab {
             .then(|| self.rows.get(line as usize - 1))
             .flatten()
             .map(|c| c.id.clone());
+        self.update_buttons();
+    }
+
+    pub fn selected(&self) -> Option<&ContainerSummary> {
+        self.rows.get(self.index_of_selected()?)
+    }
+
+    /// Enables buttons by the selected container's state (SPEC §8.3).
+    fn update_buttons(&mut self) {
+        let (any, running) = match self.selected() {
+            Some(c) => (true, c.state == "running"),
+            None => (false, false),
+        };
+        for (b, on) in [
+            (&mut self.start, any && !running),
+            (&mut self.stop, running),
+            (&mut self.restart, running),
+            (&mut self.remove, any),
+        ] {
+            if on {
+                b.activate();
+            } else {
+                b.deactivate();
+            }
+        }
     }
 
     pub fn counts(&self) -> (usize, usize) {

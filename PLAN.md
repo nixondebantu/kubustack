@@ -83,12 +83,12 @@ stopping/starting Docker shows the error panel and Retry recovers.
 
 ## M4 — Container actions
 
-- [ ] `api::start`, `stop`, `restart`, `remove(force)` with 304 treated as success [§7.4]
-- [ ] Buttons enabled/disabled by selected container state [§8.3]
-- [ ] Confirmation dialogs, including "running → stop and remove" wording [§8.3]
-- [ ] Status bar progress and result text; `dialog::alert` on errors
-- [ ] Delete key → remove, with confirmation [§8.7]
-- [ ] List refreshes after each action (events come in M6, so refresh explicitly for now)
+- [x] `api::start`, `stop`, `restart`, `remove(force)` with 304 treated as success [§7.4]
+- [x] Buttons enabled/disabled by selected container state [§8.3]
+- [x] Confirmation dialogs, including "running → stop and remove" wording [§8.3]
+- [x] Status bar progress and result text; `dialog::alert` on errors
+- [x] Delete key → remove, with confirmation [§8.7]
+- [x] List refreshes after each action (events come in M6, so refresh explicitly for now)
 
 **Done when:** all actions work on a throwaway `kubustack-test-web` container, and errors
 (e.g. removing an already-removed container) show a readable message.
