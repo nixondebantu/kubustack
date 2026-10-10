@@ -4,12 +4,17 @@ use crate::docker::models::ContainerSummary;
 use crate::format;
 use crate::msg::{Action, Msg};
 use fltk::{
-    app::Sender, browser::HoldBrowser, button::Button, enums::Color, frame::Frame, group::Flex,
+    app::Sender,
+    browser::{Browser, HoldBrowser},
+    button::Button,
+    enums::Color,
+    frame::Frame,
+    group::Flex,
     prelude::*,
 };
 
-/// Pixel widths of all columns but the last (Created).
-const COLUMNS: [i32; 4] = [180, 220, 170, 200];
+/// Width fractions of all columns but the last (Created).
+const COLUMNS: [f32; 4] = [0.20, 0.24, 0.19, 0.22];
 
 pub struct ContainersTab {
     start: Button,
@@ -17,6 +22,7 @@ pub struct ContainersTab {
     restart: Button,
     remove: Button,
     logs: Button,
+    header: Browser,
     list: HoldBrowser,
     rows: Vec<ContainerSummary>,
     selected: Option<String>,
@@ -51,11 +57,12 @@ impl ContainersTab {
         buttons.end();
         col.fixed(&buttons, 28);
 
-        let header = super::header(&COLUMNS, &["NAME", "IMAGE", "STATUS", "PORTS", "CREATED"]);
+        let widths = super::column_widths(880, &COLUMNS);
+        let header = super::header(&widths, &["NAME", "IMAGE", "STATUS", "PORTS", "CREATED"]);
         col.fixed(&header, 22);
 
         let mut list = HoldBrowser::default();
-        list.set_column_widths(&COLUMNS);
+        list.set_column_widths(&widths);
         list.set_callback(move |_| {
             s.send(Msg::ContainerSelected);
             if fltk::app::event_clicks() {
@@ -70,6 +77,7 @@ impl ContainersTab {
             restart,
             remove,
             logs,
+            header,
             list,
             rows: Vec::new(),
             selected: None,
@@ -79,14 +87,24 @@ impl ContainersTab {
     /// Replaces the list, keeping the selection (by ID) and scroll position.
     pub fn set_containers(&mut self, mut rows: Vec<ContainerSummary>) {
         sort(&mut rows);
+        self.rows = rows;
+        self.render();
+    }
+
+    /// Redraws the rows, fitting cells to the current column widths.
+    pub fn render(&mut self) {
+        let widths = super::column_widths(self.list.w(), &COLUMNS);
+        self.header.set_column_widths(&widths);
+        self.header.redraw();
+        self.list.set_column_widths(&widths);
         let now = format::now();
         super::measure_with(&self.list);
-        let lines: Vec<String> = rows
+        let lines: Vec<String> = self
+            .rows
             .iter()
-            .map(|c| row(c, now, &|text, i| super::fit(text, COLUMNS[i])))
+            .map(|c| row(c, now, &|text, i| super::fit(text, widths[i])))
             .collect();
         super::fill(&mut self.list, &lines, "No containers");
-        self.rows = rows;
         match self.index_of_selected() {
             Some(i) => self.list.select(i as i32 + 1),
             None => self.selected = None,

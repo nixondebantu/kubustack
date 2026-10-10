@@ -47,6 +47,8 @@ pub enum Msg {
     PruneImages,
     DeleteKey,
     EnterKey,
+    /// The main window was resized.
+    Resized,
     OpenLogs,
     LogFollow {
         window: u32,

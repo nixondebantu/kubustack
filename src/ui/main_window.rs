@@ -7,7 +7,7 @@ use crate::msg::Msg;
 use fltk::{
     app::{self, Sender},
     button::Button,
-    enums::{Align, Event, Key},
+    enums::{Align, Event, Key, Shortcut},
     frame::Frame,
     group::{Flex, Tabs},
     image::SvgImage,
@@ -43,6 +43,13 @@ impl MainWindow {
                 s.send(Msg::Refresh);
                 true
             }
+            Event::KeyDown | Event::Shortcut
+                if app::event_state().contains(Shortcut::Ctrl)
+                    && app::event_key() == Key::from_char('q') =>
+            {
+                app::quit();
+                true
+            }
             Event::KeyDown | Event::Shortcut if app::event_key() == Key::Delete => {
                 s.send(Msg::DeleteKey);
                 true
@@ -55,6 +62,7 @@ impl MainWindow {
             }
             _ => false,
         });
+        win.resize_callback(move |_, _, _, _, _| s.send(Msg::Resized));
         // FLTK closes windows on Escape by default; only quit on a real close.
         win.set_callback(|_| {
             if !(app::event() == Event::Shortcut && app::event_key() == Key::Escape) {

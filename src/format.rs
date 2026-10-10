@@ -115,6 +115,15 @@ pub fn strip_ansi(s: &str) -> String {
     out
 }
 
+/// "1 image", "3 images".
+pub fn plural(n: usize, word: &str) -> String {
+    if n == 1 {
+        format!("1 {word}")
+    } else {
+        format!("{n} {word}s")
+    }
+}
+
 /// Escapes `@` so FLTK labels show it literally instead of as a symbol.
 pub fn label(s: &str) -> String {
     s.replace('@', "@@")
@@ -190,6 +199,13 @@ mod tests {
         assert_eq!(strip_ansi("line\r\nnext\ttab\x08"), "line\nnext\ttab");
         assert_eq!(strip_ansi("\x1b(Bok ünï ✓"), "ok ünï ✓");
         assert_eq!(strip_ansi("cut\x1b[3"), "cut");
+    }
+
+    #[test]
+    fn plurals() {
+        assert_eq!(plural(0, "image"), "0 images");
+        assert_eq!(plural(1, "image"), "1 image");
+        assert_eq!(plural(2, "container"), "2 containers");
     }
 
     #[test]

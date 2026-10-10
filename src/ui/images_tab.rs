@@ -4,11 +4,16 @@ use crate::docker::models::ImageSummary;
 use crate::format;
 use crate::msg::Msg;
 use fltk::{
-    app::Sender, browser::HoldBrowser, button::Button, frame::Frame, group::Flex, prelude::*,
+    app::Sender,
+    browser::{Browser, HoldBrowser},
+    button::Button,
+    frame::Frame,
+    group::Flex,
+    prelude::*,
 };
 
-/// Pixel widths of all columns but the last (Created).
-const COLUMNS: [i32; 3] = [380, 140, 110];
+/// Width fractions of all columns but the last (Created).
+const COLUMNS: [f32; 3] = [0.45, 0.17, 0.13];
 const NONE: &str = "<none>:<none>";
 
 /// One list row: an image under one of its tags (or untagged).
@@ -36,6 +41,7 @@ impl ImageRow {
 
 pub struct ImagesTab {
     remove: Button,
+    header: Browser,
     list: HoldBrowser,
     rows: Vec<ImageRow>,
     /// Selected row's [`ImageRow::reference`].
@@ -63,16 +69,18 @@ impl ImagesTab {
         buttons.end();
         col.fixed(&buttons, 28);
 
-        let header = super::header(&COLUMNS, &["REPOSITORY:TAG", "IMAGE ID", "SIZE", "CREATED"]);
+        let widths = super::column_widths(880, &COLUMNS);
+        let header = super::header(&widths, &["REPOSITORY:TAG", "IMAGE ID", "SIZE", "CREATED"]);
         col.fixed(&header, 22);
 
         let mut list = HoldBrowser::default();
-        list.set_column_widths(&COLUMNS);
+        list.set_column_widths(&widths);
         list.set_callback(move |_| s.send(Msg::ImageSelected));
         col.end();
 
         ImagesTab {
             remove,
+            header,
             list,
             rows: Vec::new(),
             selected: None,
@@ -81,15 +89,25 @@ impl ImagesTab {
 
     /// Replaces the list, keeping the selection and scroll position.
     pub fn set_images(&mut self, images: Vec<ImageSummary>) {
-        let rows = rows(images);
+        self.rows = rows(images);
+        self.render();
+    }
+
+    /// Redraws the rows, fitting cells to the current column widths.
+    pub fn render(&mut self) {
+        let widths = super::column_widths(self.list.w(), &COLUMNS);
+        self.header.set_column_widths(&widths);
+        self.header.redraw();
+        self.list.set_column_widths(&widths);
         let now = format::now();
         super::measure_with(&self.list);
-        let lines: Vec<String> = rows
+        let lines: Vec<String> = self
+            .rows
             .iter()
             .map(|r| {
                 format!(
                     "@.{}\t@.{}\t@.{}\t@.{}",
-                    super::fit(r.tag.as_deref().unwrap_or(NONE), COLUMNS[0]),
+                    super::fit(r.tag.as_deref().unwrap_or(NONE), widths[0]),
                     short_id(&r.id),
                     format::size(r.size),
                     format::relative_time(r.created, now),
@@ -97,7 +115,6 @@ impl ImagesTab {
             })
             .collect();
         super::fill(&mut self.list, &lines, "No images");
-        self.rows = rows;
         match self.index_of_selected() {
             Some(i) => self.list.select(i as i32 + 1),
             None => self.selected = None,

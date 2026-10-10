@@ -143,13 +143,14 @@ ends its thread (check with `top -H -p <pid>`).
 
 ## M8 — Polish and performance check
 
-- [ ] Ctrl+Q quits; all shortcuts from [§8.7] work
-- [ ] Column widths adapt sensibly when the window is resized
-- [ ] Review every user-facing message for plain, helpful wording
+- [x] Ctrl+Q quits; all shortcuts from [§8.7] work
+- [x] Column widths adapt sensibly when the window is resized
+- [x] Review every user-facing message for plain, helpful wording
 - [ ] Re-measure binary size, idle RSS with ~50 containers, idle CPU, startup time against
-      [§3]; record in the Decision Log. Fix anything over budget.
-- [ ] `ldd` check: only standard desktop libraries
-- [ ] Remove dead code; clippy clean
+      [§3]; record in the Decision Log. Fix anything over budget. _(macOS done; Linux pending,
+      owner measures)_
+- [ ] `ldd` check: only standard desktop libraries _(Linux, owner; M1 spike already clean)_
+- [x] Remove dead code; clippy clean
 
 **Done when:** all [§3] budgets are met and recorded.
 

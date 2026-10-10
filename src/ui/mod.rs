@@ -17,6 +17,16 @@ use fltk::{
 /// Space FLTK leaves between browser columns.
 const COLUMN_GAP: i32 = 8;
 
+/// Column widths for a list `total` pixels wide: each fraction of the width (minus the
+/// scrollbar), at least 40 px. The last column takes the rest, so it has no fraction.
+pub fn column_widths(total: i32, fractions: &[f32]) -> Vec<i32> {
+    let usable = (total - 20).max(0) as f32;
+    fractions
+        .iter()
+        .map(|f| ((usable * f) as i32).max(40))
+        .collect()
+}
+
 /// Non-selectable bold header line above a list. `titles` are tab-separated.
 pub fn header(columns: &[i32], titles: &[&str]) -> Browser {
     let mut h = Browser::default();
@@ -68,4 +78,13 @@ pub fn fit(text: &str, px: i32) -> String {
         out = format::truncate(text, n);
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn widths_scale_with_minimum() {
+        assert_eq!(super::column_widths(1020, &[0.5, 0.25]), vec![500, 250]);
+        assert_eq!(super::column_widths(100, &[0.5, 0.25]), vec![40, 40]);
+    }
 }

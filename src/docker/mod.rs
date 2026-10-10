@@ -33,12 +33,18 @@ impl fmt::Display for DockerError {
                 "Permission denied for {}. Add your user to the docker group: `sudo usermod -aG docker $USER`, then log out and back in.",
                 p.display()
             ),
-            DockerError::Io(e) => write!(f, "Couldn't talk to Docker: {e}"),
+            DockerError::Io(e) => write!(
+                f,
+                "Couldn't talk to Docker: {e} Check that the Docker service is running."
+            ),
             DockerError::Api { status, message } if message.is_empty() => {
                 write!(f, "Docker returned HTTP {status}")
             }
             DockerError::Api { message, .. } => f.write_str(message),
-            DockerError::Parse(e) => write!(f, "Docker sent a response KUBUSTACK couldn't read: {e}"),
+            DockerError::Parse(e) => write!(
+                f,
+                "Docker sent a response KUBUSTACK couldn't read ({e}). Please report this at https://github.com/nixondebantu/kubustack/issues"
+            ),
             DockerError::Unsupported(e) => f.write_str(e),
         }
     }
@@ -53,7 +59,7 @@ impl DockerError {
             }
             io::ErrorKind::PermissionDenied => DockerError::PermissionDenied(socket.to_path_buf()),
             io::ErrorKind::WouldBlock | io::ErrorKind::TimedOut => {
-                DockerError::Io("Docker took too long to respond.".into())
+                DockerError::Io("Docker took too long to respond, it may be busy.".into())
             }
             _ => DockerError::Io(e.to_string()),
         }

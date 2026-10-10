@@ -195,6 +195,10 @@ impl App {
                 self.open_logs()
             }
             Msg::EnterKey => {}
+            Msg::Resized => {
+                self.ui.containers.render();
+                self.ui.images.render();
+            }
             Msg::OpenLogs => self.open_logs(),
             Msg::LogText { window, text } => {
                 if let Some(w) = self.logs_window(window) {
@@ -386,7 +390,8 @@ impl App {
                     .filter(|i| i.deleted.is_some())
                     .count();
                 format!(
-                    "Removed {n} images, reclaimed {}",
+                    "Removed {}, reclaimed {}",
+                    format::plural(n, "image"),
                     format::size(r.space_reclaimed)
                 )
             }),
@@ -438,11 +443,12 @@ impl App {
         }
         let (n, running) = self.ui.containers.counts();
         let mut text = format!(
-            "Connected · Docker {} · {n} containers ({running} running)",
-            self.version
+            "Connected · Docker {} · {} ({running} running)",
+            self.version,
+            format::plural(n, "container")
         );
         if let Some(m) = self.image_count {
-            text += &format!(" · {m} images");
+            text += &format!(" · {}", format::plural(m, "image"));
         }
         if let Some(note) = &self.note {
             text += &format!(" · {note}");
