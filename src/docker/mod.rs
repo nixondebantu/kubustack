@@ -35,7 +35,8 @@ impl fmt::Display for DockerError {
             ),
             DockerError::Io(e) => write!(
                 f,
-                "Couldn't talk to Docker: {e} Check that the Docker service is running."
+                "Couldn't talk to Docker: {}. Check that the Docker service is running.",
+                e.trim_end_matches('.')
             ),
             DockerError::Api { status, message } if message.is_empty() => {
                 write!(f, "Docker returned HTTP {status}")
@@ -174,5 +175,17 @@ mod tests {
             e(io::ErrorKind::PermissionDenied),
             DockerError::PermissionDenied(_)
         ));
+    }
+
+    #[test]
+    fn io_message_punctuation() {
+        for detail in [
+            "broken pipe",
+            "Docker took too long to respond, it may be busy.",
+        ] {
+            let msg = DockerError::Io(detail.into()).to_string();
+            assert!(!msg.contains(".."), "{msg}");
+            assert!(msg.contains(". Check"), "{msg}");
+        }
     }
 }
