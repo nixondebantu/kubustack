@@ -31,7 +31,7 @@ pub struct ContainersTab {
 impl ContainersTab {
     /// Builds the tab inside the current group (the `Tabs`).
     pub fn new(s: Sender<Msg>) -> Self {
-        let mut col = Flex::default_fill().column().with_label("Containers");
+        let mut col = Flex::default_fill().column().with_label("   Containers   ");
         col.set_margin(8);
         col.set_pad(6);
 

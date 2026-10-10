@@ -8,7 +8,7 @@ use crate::msg::Msg;
 use fltk::{
     app::{self, Sender},
     button::Button,
-    enums::{Align, Color, Event, Font, FrameType, Key, Shortcut},
+    enums::{Align, Event, Font, FrameType, Key, Shortcut},
     frame::Frame,
     group::{Flex, Tabs},
     image::SvgImage,
@@ -75,13 +75,20 @@ impl MainWindow {
         col.set_margin(8);
 
         let mut tabs = Tabs::default_fill();
-        tabs.set_frame(FrameType::FlatBox);
-        tabs.set_selection_color(Color::Background);
+        // Tabs as pill buttons: the selected one filled with the accent, the other outlined.
+        tabs.set_frame(FrameType::UpBox);
+        tabs.set_selection_color(theme::ACCENT);
+        tabs.set_label_color(theme::ON_ACCENT);
         let containers = ContainersTab::new(s);
         let images = ImagesTab::new(s);
         tabs.end();
-        tabs.set_callback(highlight_tab);
-        highlight_tab(&mut tabs);
+        for i in 0..tabs.children() {
+            if let Some(mut c) = tabs.child(i) {
+                c.set_selection_color(theme::SURFACE);
+                c.set_label_color(theme::MUTED);
+                c.set_label_font(Font::HelveticaBold);
+            }
+        }
 
         let mut error_panel = Flex::default_fill().column();
         error_panel.set_margin(40);
@@ -137,12 +144,12 @@ impl MainWindow {
         self.col.layout();
     }
 
-    /// Label of the visible tab, or `None` while the error panel shows.
+    /// Label of the visible tab (labels are space-padded), or `None` while the error panel shows.
     pub fn active_tab(&self) -> Option<String> {
         self.tabs
             .visible()
             .then(|| self.tabs.value())?
-            .map(|g| g.label())
+            .map(|g| g.label().trim().to_string())
     }
 
     pub fn show_tabs(&mut self) {
@@ -150,21 +157,4 @@ impl MainWindow {
         self.tabs.show();
         self.col.layout();
     }
-}
-
-/// Flat tabs: the selected tab's label is bold and blue, the others grey.
-fn highlight_tab(tabs: &mut Tabs) {
-    let selected = tabs.value().map(|g| g.as_widget_ptr());
-    for i in 0..tabs.children() {
-        if let Some(mut c) = tabs.child(i) {
-            let on = Some(c.as_widget_ptr()) == selected;
-            c.set_label_color(if on { theme::ACCENT } else { theme::MUTED });
-            c.set_label_font(if on {
-                Font::HelveticaBold
-            } else {
-                Font::Helvetica
-            });
-        }
-    }
-    tabs.redraw();
 }

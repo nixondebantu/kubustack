@@ -347,7 +347,8 @@ them, including edge cases (null `RepoTags`, no ports, IPv4+IPv6 duplicate ports
 - Window icon from the embedded `assets/kubustack.svg` via `fltk::image::SvgImage`
   (`include_str!`), so no extra files are needed at runtime.
 - Flat look drawn by FLTK itself (`src/ui/theme.rs`): `Base` scheme, light or dark palette
-  (decision #34) with the icon's cyan as accent, soft tinted row selection, rounded borders replacing raised/sunken boxes, taller list rows,
+  (decision #34) with the icon's cyan as accent, tabs drawn as buttons (selected one filled
+  with the accent), soft tinted row selection, rounded borders replacing raised/sunken boxes, taller list rows,
   a coloured status dot, dark logs console. System default fonts, no images in lists.
 - Layout: `Tabs` filling the window above a one-line status bar. Each tab has a button row
   on top and a list filling the rest. Use `fltk::group::Flex` for layout.

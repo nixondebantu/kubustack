@@ -17,6 +17,8 @@ pub const SURFACE: Color = Color::from_rgbi(20);
 const BORDER: Color = Color::from_rgbi(21);
 /// Selected list rows and pressed buttons: a soft tint that keeps text readable.
 pub const SELECTION: Color = Color::from_rgbi(22);
+/// Text on accent-filled areas (the selected tab).
+pub const ON_ACCENT: Color = Color::from_rgbi(23);
 pub const CONSOLE_BG: Color = Color::from_rgb(0x1E, 0x1F, 0x22);
 pub const CONSOLE_FG: Color = Color::from_rgb(0xD4, 0xD4, 0xD4);
 
@@ -30,6 +32,7 @@ struct Palette {
     border: Rgb,
     accent: Rgb,
     selection: Rgb,
+    on_accent: Rgb,
     green: Rgb,
     red: Rgb,
 }
@@ -42,6 +45,7 @@ const LIGHT: Palette = Palette {
     border: (0xD5, 0xD9, 0xE0),
     accent: (0x0E, 0x7C, 0x99),
     selection: (0xCF, 0xEC, 0xF4),
+    on_accent: (0xFF, 0xFF, 0xFF),
     green: (0x1A, 0x7F, 0x37),
     red: (0xCF, 0x22, 0x2E),
 };
@@ -54,6 +58,7 @@ const DARK: Palette = Palette {
     border: (0x38, 0x3E, 0x48),
     accent: (0x22, 0xB6, 0xCE),
     selection: (0x17, 0x4A, 0x58),
+    on_accent: (0x0B, 0x1F, 0x25),
     green: (0x3F, 0xB9, 0x50),
     red: (0xF2, 0x55, 0x5A),
 };
@@ -85,6 +90,7 @@ pub fn apply() {
         (SURFACE, p.surface),
         (BORDER, p.border),
         (SELECTION, p.selection),
+        (ON_ACCENT, p.on_accent),
     ] {
         app::set_color(slot, r, g, b);
     }
