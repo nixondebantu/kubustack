@@ -32,6 +32,33 @@ pub struct Port {
     pub kind: String,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct ImageSummary {
+    pub id: String,
+    /// Empty, `null` or `["<none>:<none>"]` for untagged images, depending on the daemon.
+    #[serde(default, deserialize_with = "nullable")]
+    pub repo_tags: Vec<String>,
+    pub size: i64,
+    pub created: i64,
+}
+
+/// Result of `POST /images/prune`.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct PruneReport {
+    #[serde(default, deserialize_with = "nullable")]
+    pub images_deleted: Vec<PruneItem>,
+    pub space_reclaimed: i64,
+}
+
+/// One entry of a prune report: either an untagged reference or a deleted image layer.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct PruneItem {
+    pub deleted: Option<String>,
+}
+
 /// Treats JSON `null` like a missing field (some daemons send `"Ports": null`).
 fn nullable<'de, D, T>(d: D) -> Result<T, D::Error>
 where
@@ -81,6 +108,46 @@ mod tests {
             .ports
             .iter()
             .any(|p| p.public_port.is_none() && p.private_port == 9000));
+    }
+
+    #[test]
+    fn images_from_fixture() {
+        let body = fixture_body(include_bytes!("../../tests/fixtures/images.http"));
+        let list: Vec<ImageSummary> = serde_json::from_slice(&body).unwrap();
+        assert_eq!(list.len(), 2);
+        let multi = list.iter().find(|i| i.repo_tags.len() == 2).unwrap();
+        assert_eq!(
+            multi.repo_tags,
+            ["kubustack-test-img:one", "kubustack-test-img:two"]
+        );
+        assert!(multi.id.starts_with("sha256:"));
+        assert!(multi.size > 0 && multi.created > 0);
+    }
+
+    #[test]
+    fn untagged_images() {
+        let json = r#"[{"Id":"sha256:a","RepoTags":null,"Size":1,"Created":1},
+                       {"Id":"sha256:b","RepoTags":[],"Size":1,"Created":1},
+                       {"Id":"sha256:c","Size":1,"Created":1}]"#;
+        let list: Vec<ImageSummary> = serde_json::from_str(json).unwrap();
+        assert!(list.iter().all(|i| i.repo_tags.is_empty()));
+    }
+
+    #[test]
+    fn prune_report() {
+        let json = r#"{"ImagesDeleted":[{"Untagged":"x:1"},{"Deleted":"sha256:a"},{"Deleted":"sha256:b"}],"SpaceReclaimed":1500000}"#;
+        let r: PruneReport = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            r.images_deleted
+                .iter()
+                .filter(|i| i.deleted.is_some())
+                .count(),
+            2
+        );
+        assert_eq!(r.space_reclaimed, 1_500_000);
+        let empty: PruneReport =
+            serde_json::from_str(r#"{"ImagesDeleted":null,"SpaceReclaimed":0}"#).unwrap();
+        assert!(empty.images_deleted.is_empty());
     }
 
     #[test]

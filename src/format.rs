@@ -59,6 +59,23 @@ pub fn truncate(s: &str, max: usize) -> String {
     out
 }
 
+/// Size in decimal units like the Docker CLI: `512 B`, `7.8 MB`, `1.2 GB`.
+pub fn size(bytes: i64) -> String {
+    const UNITS: [&str; 5] = ["B", "kB", "MB", "GB", "TB"];
+    let mut v = bytes.max(0) as f64;
+    let mut unit = 0;
+    // 999.95 so values that round to "1000.0" move up a unit.
+    while v >= 999.95 && unit < UNITS.len() - 1 {
+        v /= 1000.0;
+        unit += 1;
+    }
+    if unit == 0 {
+        format!("{v} B")
+    } else {
+        format!("{v:.1} {}", UNITS[unit])
+    }
+}
+
 /// Escapes `@` so FLTK labels show it literally instead of as a symbol.
 pub fn label(s: &str) -> String {
     s.replace('@', "@@")
@@ -112,6 +129,18 @@ mod tests {
         assert_eq!(truncate("exactly10!", 10), "exactly10!");
         assert_eq!(truncate("much too long", 5), "much…");
         assert_eq!(truncate("ünïcødé", 4), "ünï…");
+    }
+
+    #[test]
+    fn sizes() {
+        assert_eq!(size(0), "0 B");
+        assert_eq!(size(999), "999 B");
+        assert_eq!(size(1000), "1.0 kB");
+        assert_eq!(size(999_960), "1.0 MB");
+        assert_eq!(size(14_555_608), "14.6 MB");
+        assert_eq!(size(1_234_000_000), "1.2 GB");
+        assert_eq!(size(5_000_000_000_000_000), "5000.0 TB");
+        assert_eq!(size(-5), "0 B");
     }
 
     #[test]

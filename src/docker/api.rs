@@ -1,7 +1,7 @@
 //! Typed functions, one per Docker Engine API endpoint.
 
-use super::http::request;
-use super::models::{ContainerSummary, VersionInfo};
+use super::http::{encode, request};
+use super::models::{ContainerSummary, ImageSummary, PruneReport, VersionInfo};
 use super::DockerError;
 use serde::de::DeserializeOwned;
 use std::path::Path;
@@ -24,10 +24,9 @@ pub fn list_containers(socket: &Path) -> Result<Vec<ContainerSummary>, DockerErr
     get_json(socket, "/containers/json?all=1")
 }
 
-/// Number of images from `GET /images/json`.
-// ponytail: count only; M5 replaces this with list_images and real models.
-pub fn count_images(socket: &Path) -> Result<usize, DockerError> {
-    get_json::<Vec<serde::de::IgnoredAny>>(socket, "/images/json").map(|v| v.len())
+/// `GET /images/json`.
+pub fn list_images(socket: &Path) -> Result<Vec<ImageSummary>, DockerError> {
+    get_json(socket, "/images/json")
 }
 
 /// Docker waits up to 10 s before killing a container on stop/restart.
@@ -56,4 +55,18 @@ pub fn restart(socket: &Path, id: &str) -> Result<(), DockerError> {
 pub fn remove(socket: &Path, id: &str, force: bool) -> Result<(), DockerError> {
     let path = format!("/containers/{id}?force={}", u8::from(force));
     request(socket, "DELETE", &path, ACTION_TIMEOUT).map(drop)
+}
+
+/// `DELETE /images/{name}`: untags `repo:tag`, deleting the image when it was the last tag.
+/// Docker answers 409 when a container uses the image.
+pub fn remove_image(socket: &Path, name: &str) -> Result<(), DockerError> {
+    request(socket, "DELETE", &format!("/images/{name}"), ACTION_TIMEOUT).map(drop)
+}
+
+/// `POST /images/prune`: dangling images only, or all images no container uses.
+pub fn prune_images(socket: &Path, dangling_only: bool) -> Result<PruneReport, DockerError> {
+    let filters = format!(r#"{{"dangling":["{dangling_only}"]}}"#);
+    let path = format!("/images/prune?filters={}", encode(&filters));
+    let body = request(socket, "POST", &path, Duration::from_secs(120))?;
+    serde_json::from_slice(&body).map_err(|e| DockerError::Parse(e.to_string()))
 }

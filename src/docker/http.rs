@@ -138,6 +138,19 @@ fn read_body(r: &mut dyn BufRead, head: &Head) -> Result<Vec<u8>, ReadError> {
     Ok(body)
 }
 
+/// Percent-encodes a query value (everything except RFC 3986 unreserved characters).
+pub fn encode(value: &str) -> String {
+    let mut out = String::new();
+    for b in value.bytes() {
+        if b.is_ascii_alphanumeric() || b"-_.~".contains(&b) {
+            out.push(b as char);
+        } else {
+            out.push_str(&format!("%{b:02X}"));
+        }
+    }
+    out
+}
+
 /// Decodes a `Transfer-Encoding: chunked` body. Returns `None` if it is malformed.
 fn dechunk(mut data: &[u8]) -> Option<Vec<u8>> {
     let mut out = Vec::new();
@@ -259,6 +272,16 @@ pub mod tests {
     fn chunked_response() {
         let raw = b"HTTP/1.1 200 OK\r\ntransfer-encoding: Chunked\r\n\r\n4\r\nWiki\r\n6;ext=1\r\npedia \r\nE\r\nin \r\n\r\nchunks.\r\n0\r\n\r\n";
         assert_eq!(parse(raw).unwrap(), b"Wikipedia in \r\n\r\nchunks.");
+    }
+
+    #[test]
+    fn encodes_filters_json() {
+        assert_eq!(
+            encode(r#"{"dangling":["true"]}"#),
+            "%7B%22dangling%22%3A%5B%22true%22%5D%7D"
+        );
+        assert_eq!(encode("a-b_c.d~e"), "a-b_c.d~e");
+        assert_eq!(encode("é /"), "%C3%A9%20%2F");
     }
 
     #[test]

@@ -587,4 +587,5 @@ remote hosts, settings file.
 | 26 | Chunked replies | De-chunk whole bodies; streams need a de-chunking reader (M6/M7) | OrbStack sends `Transfer-Encoding: chunked` even to HTTP/1.0 requests (found in M3) |
 | 27 | UI events | Widget callbacks send `Msg` through the channel | One state struct and one dispatch `match`, no shared `Rc<RefCell>` |
 | 28 | Port model | No `IP` field | Never displayed; IPv4/IPv6 duplicates are merged by port and type |
+| 29 | Untagged images | Listed as `<none>:<none>` rows (matches `docker images -a`) | Docker 29's `docker images` hides untagged images by default, but they are what prune removes, so the list shows them. The status bar counts image objects, not rows |
 | — | Spike results | **Linux** (Mint, X11, x86_64, fltk 1.5.23): default build 1.18 MB stripped; `ldd` lists 46 stock desktop libs (X11/Xft/fontconfig/freetype, pango/cairo/harfbuzz/glib), no extras. `no-pango` build: 1.20 MB, 25 libs, RSS 8.8 MB, CPU 0.1% (lifetime average incl. startup). Default-build RSS not captured, re-measured in M8. **macOS** (arm64): 1.06 MB, idle CPU 0.0% | Measured during M1 |

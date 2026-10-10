@@ -1,0 +1,11 @@
+HTTP/1.1 200 OK
+Api-Version: 1.54
+Connection: close
+Content-Length: 1019
+Content-Type: application/json
+Date: Sat, 10 Oct 2026 09:48:27 GMT
+Docker-Experimental: true
+Ostype: linux
+Server: Docker/29.4.0 (linux)
+
+[{"Containers":0,"Created":1781568080,"Id":"sha256:7949affa460dcfebc206f697107eb152d7552045dd835ec9fa87042ce21781e7","Labels":{"kubustack-test":"1"},"ParentId":"","Descriptor":{"mediaType":"application/vnd.oci.image.index.v1+json","digest":"sha256:7949affa460dcfebc206f697107eb152d7552045dd835ec9fa87042ce21781e7","size":855},"RepoDigests":["kubustack-test-img@sha256:7949affa460dcfebc206f697107eb152d7552045dd835ec9fa87042ce21781e7"],"RepoTags":["kubustack-test-img:solo"],"SharedSize":-1,"Size":14471176},{"Containers":0,"Created":1781568080,"Id":"sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b","Labels":{},"ParentId":"","Descriptor":{"mediaType":"application/vnd.oci.image.index.v1+json","digest":"sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b","size":9218},"RepoDigests":["kubustack-test-img@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b"],"RepoTags":["kubustack-test-img:one","kubustack-test-img:two"],"SharedSize":-1,"Size":14555608}]

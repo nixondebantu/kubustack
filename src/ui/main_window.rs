@@ -1,6 +1,7 @@
 //! Main window: tabs, status bar, error panel.
 
 use super::containers_tab::ContainersTab;
+use super::images_tab::ImagesTab;
 use crate::format;
 use crate::msg::Msg;
 use fltk::{
@@ -8,7 +9,7 @@ use fltk::{
     button::Button,
     enums::{Align, Event, Key},
     frame::Frame,
-    group::{Flex, Group, Tabs},
+    group::{Flex, Tabs},
     image::SvgImage,
     prelude::*,
     window::Window,
@@ -23,6 +24,7 @@ pub struct MainWindow {
     error_text: Frame,
     status: Frame,
     pub containers: ContainersTab,
+    pub images: ImagesTab,
 }
 
 impl MainWindow {
@@ -59,7 +61,7 @@ impl MainWindow {
 
         let mut tabs = Tabs::default_fill();
         let containers = ContainersTab::new(s);
-        Group::default_fill().with_label("Images").end();
+        let images = ImagesTab::new(s);
         tabs.end();
 
         let mut error_panel = Flex::default_fill().column();
@@ -98,6 +100,7 @@ impl MainWindow {
             error_text,
             status,
             containers,
+            images,
         }
     }
 
@@ -113,9 +116,12 @@ impl MainWindow {
         self.col.layout();
     }
 
-    pub fn containers_tab_active(&self) -> bool {
-        // ponytail: matches by tab label; fine while tab names are fixed.
-        self.tabs.visible() && self.tabs.value().is_some_and(|g| g.label() == "Containers")
+    /// Label of the visible tab, or `None` while the error panel shows.
+    pub fn active_tab(&self) -> Option<String> {
+        self.tabs
+            .visible()
+            .then(|| self.tabs.value())?
+            .map(|g| g.label())
     }
 
     pub fn show_tabs(&mut self) {

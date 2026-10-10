@@ -97,13 +97,13 @@ stopping/starting Docker shows the error panel and Retry recovers.
 
 ## M5 — Images tab
 
-- [ ] `ImageSummary` model with fixture tests, including null `RepoTags` [§7.5]
-- [ ] `api::list_images`, `remove_image`, `prune_images(dangling_only)`; URL-encode helper for
+- [x] `ImageSummary` model with fixture tests, including null `RepoTags` [§7.5]
+- [x] `api::list_images`, `remove_image`, `prune_images(dangling_only)`; URL-encode helper for
       the `filters` JSON, with tests [§7.2]
-- [ ] Size formatting (base 1000, like the Docker CLI) with tests
-- [ ] Images list: one row per tag, short ID, sorting, `<none>` last [§8.4]
-- [ ] Remove with confirmation; 409 shows Docker's message
-- [ ] Prune three-button dialog and result summary in the status bar [§8.4]
+- [x] Size formatting (base 1000, like the Docker CLI) with tests
+- [x] Images list: one row per tag, short ID, sorting, `<none>` last [§8.4]
+- [x] Remove with confirmation; 409 shows Docker's message
+- [x] Prune three-button dialog and result summary in the status bar [§8.4]
 
 **Done when:** the list matches `docker images`, removing `kubustack-test` tagged images works,
 and removing an in-use image shows the conflict message. Test prune only after asking the user.

@@ -110,10 +110,13 @@ impl App {
                 }
                 self.update_status();
             }
-            Msg::ImagesCounted(result) => {
+            Msg::ImagesLoaded(result) => {
                 let again = self.images_refresh.finish();
                 match result {
-                    Ok(n) if self.socket.is_some() => self.image_count = Some(n),
+                    Ok(list) if self.socket.is_some() => {
+                        self.image_count = Some(list.len());
+                        self.ui.images.set_images(list);
+                    }
                     Ok(_) => return,
                     Err(e) => return self.disconnected(e),
                 }
@@ -124,24 +127,24 @@ impl App {
             }
             Msg::ContainerSelected => self.ui.containers.on_select(),
             Msg::ContainerAction(a) => self.container_action(a),
-            Msg::DeleteKey if self.ui.containers_tab_active() => {
-                self.container_action(Action::Remove)
-            }
-            Msg::DeleteKey => {}
-            Msg::ActionDone {
-                done,
-                failed,
-                result,
-            } => {
+            Msg::ImageSelected => self.ui.images.on_select(),
+            Msg::RemoveImage => self.remove_image(),
+            Msg::PruneImages => self.prune_images(),
+            Msg::DeleteKey => match self.ui.active_tab().as_deref() {
+                Some("Containers") => self.container_action(Action::Remove),
+                Some("Images") => self.remove_image(),
+                _ => {}
+            },
+            Msg::ActionDone { failed, result } => {
                 match result {
-                    Ok(()) => self.note = Some(done),
+                    Ok(done) => self.note = Some(done),
                     Err(e) => {
                         self.note = Some(failed.clone());
                         dialogs::alert(&format!("{failed}: {e}"));
                     }
                 }
                 // ponytail: explicit refresh until M6 events cover it.
-                self.refresh_containers();
+                self.refresh_all();
                 self.update_status();
             }
         }
@@ -184,10 +187,55 @@ impl App {
                 Action::Remove => api::remove(&socket, &id, running),
             };
             Msg::ActionDone {
-                done: format!("{done} {name}"),
                 failed: format!("Couldn't {verb} {name}"),
-                result,
+                result: result.map(|()| format!("{done} {name}")),
             }
+        });
+    }
+
+    /// Removes the selected image (untags it, or deletes an untagged image by ID) after confirming.
+    fn remove_image(&mut self) {
+        let Some(socket) = self.socket.clone() else {
+            return;
+        };
+        let Some(row) = self.ui.images.selected() else {
+            return;
+        };
+        let name = row.display_name();
+        let reference = row.reference().to_string();
+        if !dialogs::confirm(&format!("Remove image {name}?"), "Remove") {
+            return;
+        }
+        self.note = Some(format!("Removing {name}…"));
+        self.update_status();
+        worker::spawn(self.s, move || Msg::ActionDone {
+            failed: format!("Couldn't remove image {name}"),
+            result: api::remove_image(&socket, &reference).map(|()| format!("Removed {name}")),
+        });
+    }
+
+    fn prune_images(&mut self) {
+        let Some(socket) = self.socket.clone() else {
+            return;
+        };
+        let Some(dangling_only) = dialogs::prune_choice() else {
+            return;
+        };
+        self.note = Some("Removing unused images…".into());
+        self.update_status();
+        worker::spawn(self.s, move || Msg::ActionDone {
+            failed: "Couldn't remove unused images".into(),
+            result: api::prune_images(&socket, dangling_only).map(|r| {
+                let n = r
+                    .images_deleted
+                    .iter()
+                    .filter(|i| i.deleted.is_some())
+                    .count();
+                format!(
+                    "Removed {n} images, reclaimed {}",
+                    format::size(r.space_reclaimed)
+                )
+            }),
         });
     }
 
@@ -226,9 +274,7 @@ impl App {
             return;
         };
         if self.images_refresh.start() {
-            worker::spawn(self.s, move || {
-                Msg::ImagesCounted(api::count_images(&socket))
-            });
+            worker::spawn(self.s, move || Msg::ImagesLoaded(api::list_images(&socket)));
         }
     }
 
@@ -260,7 +306,7 @@ fn check() -> ExitCode {
         let containers = api::list_containers(&socket)?;
         let running = containers.iter().filter(|c| c.state == "running").count();
         println!("Containers: {} ({running} running)", containers.len());
-        println!("Images:     {}", api::count_images(&socket)?);
+        println!("Images:     {}", api::list_images(&socket)?.len());
         Ok(())
     });
     match result {

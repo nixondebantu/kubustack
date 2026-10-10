@@ -4,20 +4,12 @@ use crate::docker::models::ContainerSummary;
 use crate::format;
 use crate::msg::{Action, Msg};
 use fltk::{
-    app::Sender,
-    browser::{Browser, BrowserScrollbar, HoldBrowser},
-    button::Button,
-    draw,
-    enums::{Color, Font, FrameType},
-    frame::Frame,
-    group::Flex,
+    app::Sender, browser::HoldBrowser, button::Button, enums::Color, frame::Frame, group::Flex,
     prelude::*,
 };
 
 /// Pixel widths of all columns but the last (Created).
 const COLUMNS: [i32; 4] = [180, 220, 170, 200];
-/// Space FLTK leaves between columns.
-const COLUMN_GAP: i32 = 8;
 
 pub struct ContainersTab {
     start: Button,
@@ -54,13 +46,7 @@ impl ContainersTab {
         buttons.end();
         col.fixed(&buttons, 28);
 
-        let mut header = Browser::default();
-        header.set_column_widths(&COLUMNS);
-        header.set_has_scrollbar(BrowserScrollbar::None);
-        header.set_frame(FrameType::FlatBox);
-        header.set_color(Color::Background);
-        header.clear_visible_focus();
-        header.add("@b@.NAME\t@b@.IMAGE\t@b@.STATUS\t@b@.PORTS\t@b@.CREATED");
+        let header = super::header(&COLUMNS, &["NAME", "IMAGE", "STATUS", "PORTS", "CREATED"]);
         col.fixed(&header, 22);
 
         let mut list = HoldBrowser::default();
@@ -82,26 +68,18 @@ impl ContainersTab {
     /// Replaces the list, keeping the selection (by ID) and scroll position.
     pub fn set_containers(&mut self, mut rows: Vec<ContainerSummary>) {
         sort(&mut rows);
-        let scroll = self.list.position();
-        self.list.clear();
-        if rows.is_empty() {
-            self.list.add("No containers");
-            self.list.deactivate();
-        } else {
-            self.list.activate();
-            let now = format::now();
-            draw::set_font(Font::Helvetica, self.list.text_size());
-            for c in &rows {
-                self.list
-                    .add(&row(c, now, &|text, i| fit(text, COLUMNS[i])));
-            }
-        }
+        let now = format::now();
+        super::measure_with(&self.list);
+        let lines: Vec<String> = rows
+            .iter()
+            .map(|c| row(c, now, &|text, i| super::fit(text, COLUMNS[i])))
+            .collect();
+        super::fill(&mut self.list, &lines, "No containers");
         self.rows = rows;
         match self.index_of_selected() {
             Some(i) => self.list.select(i as i32 + 1),
             None => self.selected = None,
         }
-        self.list.set_position(scroll);
         self.update_buttons();
     }
 
@@ -158,19 +136,6 @@ fn sort(rows: &mut [ContainerSummary]) {
             format::container_name(&c.names, &c.id).to_lowercase(),
         )
     });
-}
-
-/// Shortens `text` with `…` until it fits `px` in the current draw font.
-fn fit(text: &str, px: i32) -> String {
-    let px = f64::from(px - COLUMN_GAP);
-    let mut n = text.chars().count();
-    let mut out = text.to_string();
-    // ponytail: shrinks one char at a time; fine for cell-sized strings.
-    while n > 1 && draw::width(&out) > px {
-        n -= 1;
-        out = format::truncate(text, n);
-    }
-    out
 }
 
 /// One browser line; `cell(text, column)` fits text to its column.

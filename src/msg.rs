@@ -1,6 +1,6 @@
 //! Messages sent to the UI thread, from job threads and from widget callbacks.
 
-use crate::docker::models::{ContainerSummary, VersionInfo};
+use crate::docker::models::{ContainerSummary, ImageSummary, VersionInfo};
 use crate::docker::DockerError;
 use std::path::PathBuf;
 
@@ -8,17 +8,20 @@ pub enum Msg {
     // results from job threads
     Connected(Result<(PathBuf, VersionInfo), DockerError>),
     ContainersLoaded(Result<Vec<ContainerSummary>, DockerError>),
-    ImagesCounted(Result<usize, DockerError>),
+    ImagesLoaded(Result<Vec<ImageSummary>, DockerError>),
+    /// `result` holds the success text for the status bar; `failed` prefixes the error.
     ActionDone {
-        done: String,
         failed: String,
-        result: Result<(), DockerError>,
+        result: Result<String, DockerError>,
     },
     // from widgets and keys
     Refresh,
     Retry,
     ContainerSelected,
     ContainerAction(Action),
+    ImageSelected,
+    RemoveImage,
+    PruneImages,
     DeleteKey,
 }
 
