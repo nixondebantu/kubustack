@@ -146,9 +146,8 @@ ends its thread (check with `top -H -p <pid>`).
 - [x] Ctrl+Q quits; all shortcuts from [§8.7] work
 - [x] Column widths adapt sensibly when the window is resized
 - [x] Review every user-facing message for plain, helpful wording
-- [ ] Re-measure binary size, idle RSS with ~50 containers, idle CPU, startup time against
-      [§3]; record in the Decision Log. Fix anything over budget. _(macOS done; Linux RSS, CPU,
-      threads done; Linux startup time pending)_
+- [x] Re-measure binary size, idle RSS with ~50 containers, idle CPU, startup time against
+      [§3]; record in the Decision Log. Fix anything over budget.
 - [x] `ldd` check: only standard desktop libraries
 - [x] Remove dead code; clippy clean
 
