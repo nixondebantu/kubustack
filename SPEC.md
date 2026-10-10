@@ -313,12 +313,17 @@ them, including edge cases (null `RepoTags`, no ports, IPv4+IPv6 duplicate ports
   `serde_json::Deserializer::from_reader(reader).into_iter::<serde_json::Value>()`, which
   works whether or not objects are newline-separated.
 - Map `Type == "container"` → `Msg::DockerEvent(Container)`, `Type == "image"` →
-  `Msg::DockerEvent(Image)`. Ignore everything else.
+  `Msg::DockerEvent(Image)`. Ignore everything else, including container `exec_*` actions
+  (health checks fire them constantly and they change no list, §14 #30).
 - **Debounce on the main thread:** on a `DockerEvent`, mark that list dirty. If no timer is
   pending, schedule one with `app::add_timeout3(0.3, ...)` that refreshes the dirty lists.
   This turns bursts (e.g. a prune emitting dozens of events) into one refresh.
 - **Reconnect:** if the stream ends or fails, send `Msg::EventsDisconnected` and retry with
-  backoff (2 s, 4 s, 8 s, … capped at 30 s). On reconnect, refresh both lists once.
+  backoff (2 s, 4 s, 8 s, … capped at 30 s). On reconnect, refresh both lists once, or reconnect
+  fully if the error panel is showing, so the app recovers without Retry (§14 #31). On
+  disconnect, refresh once so the error panel appears at once if Docker itself went away.
+- Container and image actions don't refresh by hand while events are live (the events do it);
+  they do while live updates are paused.
 
 ## 8. UI specification
 
@@ -588,4 +593,6 @@ remote hosts, settings file.
 | 27 | UI events | Widget callbacks send `Msg` through the channel | One state struct and one dispatch `match`, no shared `Rc<RefCell>` |
 | 28 | Port model | No `IP` field | Never displayed; IPv4/IPv6 duplicates are merged by port and type |
 | 29 | Untagged images | Listed as `<none>:<none>` rows (matches `docker images -a`) | Docker 29's `docker images` hides untagged images by default, but they are what prune removes, so the list shows them. The status bar counts image objects, not rows |
+| 30 | Exec events | Ignored | Health checks emit `exec_*` events every few seconds; refreshing on them would break the zero-idle-CPU goal |
+| 31 | Auto-recover | Events reconnect restores the connection | When Docker comes back, the listener notices first, so the error panel clears without pressing Retry |
 | — | Spike results | **Linux** (Mint, X11, x86_64, fltk 1.5.23): default build 1.18 MB stripped; `ldd` lists 46 stock desktop libs (X11/Xft/fontconfig/freetype, pango/cairo/harfbuzz/glib), no extras. `no-pango` build: 1.20 MB, 25 libs, RSS 8.8 MB, CPU 0.1% (lifetime average incl. startup). Default-build RSS not captured, re-measured in M8. **macOS** (arm64): 1.06 MB, idle CPU 0.0% | Measured during M1 |

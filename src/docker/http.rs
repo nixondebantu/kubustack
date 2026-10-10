@@ -1,7 +1,7 @@
 //! Raw HTTP/1.0 over a Unix socket and response parsing.
 
 use super::DockerError;
-use std::io::{BufRead, BufReader, Read, Write};
+use std::io::{self, BufRead, BufReader, Read, Write};
 use std::os::unix::net::UnixStream;
 use std::path::Path;
 use std::time::Duration;
@@ -17,6 +17,27 @@ pub fn request(
     let stream = connect(socket, method, path, Some(timeout))?;
     let mut reader = BufReader::new(stream);
     read_response(&mut reader).map_err(|e| io_or(e, socket))
+}
+
+/// Sends a request and returns a reader over the body (de-chunked if needed), with no read
+/// timeout. Statuses >= 400 become `DockerError::Api`.
+pub fn stream(
+    socket: &Path,
+    method: &str,
+    path: &str,
+) -> Result<Box<dyn Read + Send>, DockerError> {
+    let stream = connect(socket, method, path, None)?;
+    let mut reader = BufReader::new(stream);
+    let head = read_head(&mut reader).map_err(|e| io_or(e, socket))?;
+    if head.status >= 400 {
+        let body = read_body(&mut reader, &head).map_err(|e| io_or(e, socket))?;
+        return Err(api_error(head.status, &body));
+    }
+    Ok(if head.chunked {
+        Box::new(Chunked::new(reader))
+    } else {
+        Box::new(reader)
+    })
 }
 
 fn connect(
@@ -121,19 +142,22 @@ fn read_head(r: &mut dyn BufRead) -> Result<Head, ReadError> {
 /// Reads the body: chunked, exactly Content-Length bytes, or until the server closes.
 fn read_body(r: &mut dyn BufRead, head: &Head) -> Result<Vec<u8>, ReadError> {
     let mut body = Vec::new();
-    match head.content_length {
-        Some(len) if !head.chunked => {
-            Read::take(&mut *r, len).read_to_end(&mut body)?;
-            if (body.len() as u64) < len {
-                return Err(parse_err("response was cut short"));
-            }
-        }
-        _ => {
-            r.read_to_end(&mut body)?;
-        }
-    }
     if head.chunked {
-        body = dechunk(&body).ok_or_else(|| parse_err("malformed chunked body"))?;
+        Chunked::new(r)
+            .read_to_end(&mut body)
+            .map_err(|e| match e.kind() {
+                io::ErrorKind::InvalidData | io::ErrorKind::UnexpectedEof => {
+                    parse_err(format!("malformed chunked body: {e}"))
+                }
+                _ => ReadError::Io(e),
+            })?;
+    } else if let Some(len) = head.content_length {
+        Read::take(&mut *r, len).read_to_end(&mut body)?;
+        if (body.len() as u64) < len {
+            return Err(parse_err("response was cut short"));
+        }
+    } else {
+        r.read_to_end(&mut body)?;
     }
     Ok(body)
 }
@@ -151,23 +175,59 @@ pub fn encode(value: &str) -> String {
     out
 }
 
-/// Decodes a `Transfer-Encoding: chunked` body. Returns `None` if it is malformed.
-fn dechunk(mut data: &[u8]) -> Option<Vec<u8>> {
-    let mut out = Vec::new();
-    loop {
-        let eol = data.windows(2).position(|w| w == b"\r\n")?;
-        let size_line = std::str::from_utf8(&data[..eol]).ok()?;
-        let size_hex = size_line.split(';').next()?.trim();
-        let size = usize::from_str_radix(size_hex, 16).ok()?;
-        data = &data[eol + 2..];
-        if size == 0 {
-            return Some(out);
+/// Reader that decodes a `Transfer-Encoding: chunked` body as it arrives.
+struct Chunked<R> {
+    inner: R,
+    /// Bytes left in the current chunk.
+    left: usize,
+    done: bool,
+}
+
+impl<R: BufRead> Chunked<R> {
+    fn new(inner: R) -> Self {
+        Chunked {
+            inner,
+            left: 0,
+            done: false,
         }
-        if data.len() < size + 2 || &data[size..size + 2] != b"\r\n" {
-            return None;
+    }
+}
+
+impl<R: BufRead> Read for Chunked<R> {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        if self.done || buf.is_empty() {
+            return Ok(0);
         }
-        out.extend_from_slice(&data[..size]);
-        data = &data[size + 2..];
+        if self.left == 0 {
+            let mut line = String::new();
+            if self.inner.read_line(&mut line)? == 0 {
+                return Err(io::ErrorKind::UnexpectedEof.into());
+            }
+            let hex = line.split(';').next().unwrap_or("").trim();
+            self.left = usize::from_str_radix(hex, 16)
+                .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "bad chunk size"))?;
+            if self.left == 0 {
+                self.done = true;
+                return Ok(0);
+            }
+        }
+        let max = buf.len().min(self.left);
+        let n = self.inner.read(&mut buf[..max])?;
+        if n == 0 {
+            return Err(io::ErrorKind::UnexpectedEof.into());
+        }
+        self.left -= n;
+        if self.left == 0 {
+            let mut crlf = [0u8; 2];
+            self.inner.read_exact(&mut crlf)?;
+            if &crlf != b"\r\n" {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "chunk overran its size",
+                ));
+            }
+        }
+        Ok(n)
     }
 }
 
@@ -284,12 +344,41 @@ pub mod tests {
         assert_eq!(encode("é /"), "%C3%A9%20%2F");
     }
 
+    fn dechunk(data: &[u8]) -> io::Result<Vec<u8>> {
+        let mut out = Vec::new();
+        Chunked::new(data).read_to_end(&mut out)?;
+        Ok(out)
+    }
+
     #[test]
     fn dechunk_edge_cases() {
         assert_eq!(dechunk(b"0\r\n\r\n").unwrap(), b"");
         assert_eq!(dechunk(b"a\r\n0123456789\r\n0\r\n").unwrap(), b"0123456789");
-        assert!(dechunk(b"5\r\nabc\r\n0\r\n").is_none()); // short chunk
-        assert!(dechunk(b"zz\r\nabc\r\n").is_none()); // bad size
-        assert!(dechunk(b"3\r\nabc\r\n").is_none()); // missing final chunk
+        assert!(dechunk(b"5\r\nabc\r\n0\r\n").is_err()); // short chunk
+        assert!(dechunk(b"zz\r\nabc\r\n").is_err()); // bad size
+        assert!(dechunk(b"3\r\nabc\r\n").is_err()); // missing final chunk
+    }
+
+    /// A reader that hands out at most one byte per call, like a slow socket.
+    struct Trickle<'a>(&'a [u8]);
+
+    impl Read for Trickle<'_> {
+        fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+            if self.0.is_empty() || buf.is_empty() {
+                return Ok(0);
+            }
+            buf[0] = self.0[0];
+            self.0 = &self.0[1..];
+            Ok(1)
+        }
+    }
+
+    #[test]
+    fn chunked_stream_survives_byte_by_byte_reads() {
+        let raw = b"4\r\nWiki\r\n6;ext=1\r\npedia \r\n3\r\nok!\r\n0\r\n\r\n";
+        let mut out = Vec::new();
+        let r = BufReader::with_capacity(1, Trickle(raw));
+        Chunked::new(r).read_to_end(&mut out).unwrap();
+        assert_eq!(out, b"Wikipedia ok!");
     }
 }

@@ -6,9 +6,9 @@ mod msg;
 mod ui;
 mod worker;
 
-use docker::{api, DockerError};
+use docker::{api, events, DockerError};
 use fltk::app::{self, Sender};
-use msg::{Action, Msg};
+use msg::{Action, Msg, Scope};
 use std::path::PathBuf;
 use std::process::ExitCode;
 use ui::{dialogs, main_window::MainWindow};
@@ -57,6 +57,10 @@ fn run_gui() -> ExitCode {
         version: String::new(),
         image_count: None,
         note: None,
+        listening: false,
+        events_down: false,
+        dirty: (false, false),
+        settling: false,
         containers_refresh: Refresh::default(),
         images_refresh: Refresh::default(),
     };
@@ -79,6 +83,14 @@ struct App {
     image_count: Option<usize>,
     /// Last action progress or result, appended to the status bar until the next Refresh.
     note: Option<String>,
+    /// The events listener thread has been started (it lives for the whole run).
+    listening: bool,
+    /// Live updates are paused: the events stream is down.
+    events_down: bool,
+    /// Lists (containers, images) changed by events since the last debounced refresh.
+    dirty: (bool, bool),
+    /// A debounce timer is pending.
+    settling: bool,
     containers_refresh: Refresh,
     images_refresh: Refresh,
 }
@@ -91,6 +103,12 @@ impl App {
                 self.version = v.version;
                 self.ui.show_tabs();
                 self.refresh_all();
+                if !self.listening {
+                    self.listening = true;
+                    if let Some(socket) = self.socket.clone() {
+                        events::spawn_listener(socket, self.s);
+                    }
+                }
             }
             Msg::Connected(Err(e)) => self.disconnected(e),
             Msg::Refresh => {
@@ -127,6 +145,47 @@ impl App {
             }
             Msg::ContainerSelected => self.ui.containers.on_select(),
             Msg::ContainerAction(a) => self.container_action(a),
+            Msg::DockerEvent(scope) => {
+                match scope {
+                    Scope::Container => self.dirty.0 = true,
+                    Scope::Image => self.dirty.1 = true,
+                }
+                // Debounce: one refresh for a burst of events (e.g. a prune).
+                if !self.settling {
+                    self.settling = true;
+                    let s = self.s;
+                    app::add_timeout3(0.3, move |_| s.send(Msg::EventsSettled));
+                }
+            }
+            Msg::EventsSettled => {
+                self.settling = false;
+                let (containers, images) = std::mem::take(&mut self.dirty);
+                if containers {
+                    self.refresh_containers();
+                }
+                if images {
+                    self.refresh_images();
+                }
+            }
+            Msg::EventsConnected => {
+                if self.events_down {
+                    self.events_down = false;
+                    // Docker may have come back while we showed the error panel.
+                    if self.socket.is_some() {
+                        self.refresh_all();
+                    } else {
+                        self.connect();
+                    }
+                }
+            }
+            Msg::EventsDisconnected => {
+                if !self.events_down {
+                    self.events_down = true;
+                    // A refresh shows the error panel at once if Docker itself went away.
+                    self.refresh_all();
+                    self.update_status();
+                }
+            }
             Msg::ImageSelected => self.ui.images.on_select(),
             Msg::RemoveImage => self.remove_image(),
             Msg::PruneImages => self.prune_images(),
@@ -143,8 +202,10 @@ impl App {
                         dialogs::alert(&format!("{failed}: {e}"));
                     }
                 }
-                // ponytail: explicit refresh until M6 events cover it.
-                self.refresh_all();
+                // Events refresh the lists; refresh by hand only while they're down.
+                if self.events_down {
+                    self.refresh_all();
+                }
                 self.update_status();
             }
         }
@@ -292,6 +353,9 @@ impl App {
         }
         if let Some(note) = &self.note {
             text += &format!(" · {note}");
+        }
+        if self.events_down {
+            text += " · live updates paused";
         }
         self.ui.set_status(&text);
     }

@@ -112,10 +112,10 @@ and removing an in-use image shows the conflict message. Test prune only after a
 
 ## M6 — Live updates via events
 
-- [ ] `http::stream` [§7.2]; `events.rs` listener thread using the streaming JSON deserializer [§7.7]
-- [ ] Debounced refresh on the main thread with `app::add_timeout3`
-- [ ] Reconnect with backoff; "live updates paused" status suffix; full refresh on reconnect
-- [ ] Remove the explicit post-action refreshes from M4 if events now cover them (keep them if
+- [x] `http::stream` [§7.2]; `events.rs` listener thread using the streaming JSON deserializer [§7.7]
+- [x] Debounced refresh on the main thread with `app::add_timeout3`
+- [x] Reconnect with backoff; "live updates paused" status suffix; full refresh on reconnect
+- [x] Remove the explicit post-action refreshes from M4 if events now cover them (keep them if
       it makes the UI feel snappier, but never refresh twice for one action)
 
 **Done when:** running `docker run -d --name kubustack-test-ev nginx:alpine` and

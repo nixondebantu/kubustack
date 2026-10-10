@@ -14,6 +14,12 @@ pub enum Msg {
         failed: String,
         result: Result<String, DockerError>,
     },
+    // from the events listener
+    DockerEvent(Scope),
+    EventsConnected,
+    EventsDisconnected,
+    /// The debounce timer after events fired.
+    EventsSettled,
     // from widgets and keys
     Refresh,
     Retry,
@@ -23,6 +29,12 @@ pub enum Msg {
     RemoveImage,
     PruneImages,
     DeleteKey,
+}
+
+#[derive(Clone, Copy)]
+pub enum Scope {
+    Container,
+    Image,
 }
 
 #[derive(Clone, Copy)]
