@@ -1,5 +1,6 @@
 //! Containers tab: list and actions.
 
+use super::theme;
 use crate::docker::models::ContainerSummary;
 use crate::format;
 use crate::msg::{Action, Msg};
@@ -7,7 +8,6 @@ use fltk::{
     app::Sender,
     browser::{Browser, HoldBrowser},
     button::Button,
-    enums::Color,
     frame::Frame,
     group::Flex,
     prelude::*,
@@ -32,7 +32,8 @@ impl ContainersTab {
     /// Builds the tab inside the current group (the `Tabs`).
     pub fn new(s: Sender<Msg>) -> Self {
         let mut col = Flex::default_fill().column().with_label("Containers");
-        col.set_margin(4);
+        col.set_margin(8);
+        col.set_pad(6);
 
         let mut buttons = Flex::default().row();
         let mut action = |label: &str, a: Action| {
@@ -45,7 +46,8 @@ impl ContainersTab {
         let start = action("Start", Action::Start);
         let stop = action("Stop", Action::Stop);
         let restart = action("Restart", Action::Restart);
-        let remove = action("Remove", Action::Remove);
+        let mut remove = action("Remove", Action::Remove);
+        remove.set_label_color(theme::RED);
         let mut logs = Button::default().with_label("Logs");
         logs.set_callback(move |_| s.send(Msg::OpenLogs));
         logs.deactivate();
@@ -55,14 +57,14 @@ impl ContainersTab {
         refresh.set_callback(move |_| s.send(Msg::Refresh));
         buttons.fixed(&refresh, 90);
         buttons.end();
-        col.fixed(&buttons, 28);
+        col.fixed(&buttons, 30);
 
         let widths = super::column_widths(880, &COLUMNS);
         let header = super::header(&widths, &["NAME", "IMAGE", "STATUS", "PORTS", "CREATED"]);
         col.fixed(&header, 22);
 
         let mut list = HoldBrowser::default();
-        list.set_column_widths(&widths);
+        super::style_list(&mut list, &widths);
         list.set_callback(move |_| {
             s.send(Msg::ContainerSelected);
             if fltk::app::event_clicks() {
@@ -94,9 +96,7 @@ impl ContainersTab {
     /// Redraws the rows, fitting cells to the current column widths.
     pub fn render(&mut self) {
         let widths = super::column_widths(self.list.w(), &COLUMNS);
-        self.header.set_column_widths(&widths);
-        self.header.redraw();
-        self.list.set_column_widths(&widths);
+        super::set_columns(&mut self.header, &mut self.list, &widths);
         let now = format::now();
         super::measure_with(&self.list);
         let lines: Vec<String> = self
@@ -171,16 +171,17 @@ fn sort(rows: &mut [ContainerSummary]) {
 /// One browser line; `cell(text, column)` fits text to its column.
 /// `@.` stops format parsing so cell text is shown literally.
 fn row(c: &ContainerSummary, now: i64, cell: &dyn Fn(&str, usize) -> String) -> String {
-    let status_color = if c.state == "running" {
-        format!("@C{}", Color::DarkGreen.bits())
+    let dot = if c.state == "running" {
+        theme::GREEN
     } else {
-        String::new()
+        theme::MUTED
     };
     format!(
-        "@.{}\t@.{}\t{status_color}@.{}\t@.{}\t@.{}",
+        "@.{}\t@.{}\t@C{}@.{}\t@.{}\t@.{}",
         cell(&format::container_name(&c.names, &c.id), 0),
         cell(&c.image, 1),
-        cell(&c.status, 2),
+        dot.bits(),
+        cell(&format!("● {}", c.status), 2),
         cell(&format::ports(&c.ports), 3),
         format::relative_time(c.created, now),
     )
@@ -189,6 +190,7 @@ fn row(c: &ContainerSummary, now: i64, cell: &dyn Fn(&str, usize) -> String) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fltk::enums::Color;
 
     fn c(name: &str, state: &str) -> ContainerSummary {
         ContainerSummary {
@@ -218,8 +220,8 @@ mod tests {
     #[test]
     fn running_status_is_green() {
         let plain = |t: &str, _: usize| t.to_string();
-        let green = format!("@C{}@.s", Color::DarkGreen.bits());
-        assert!(row(&c("web", "running"), 0, &plain).contains(&green));
-        assert!(!row(&c("web", "exited"), 0, &plain).contains("@C"));
+        let colored = |color: Color| format!("@C{}@.● s", color.bits());
+        assert!(row(&c("web", "running"), 0, &plain).contains(&colored(theme::GREEN)));
+        assert!(row(&c("web", "exited"), 0, &plain).contains(&colored(theme::MUTED)));
     }
 }

@@ -2,12 +2,13 @@
 
 use super::containers_tab::ContainersTab;
 use super::images_tab::ImagesTab;
+use super::theme;
 use crate::format;
 use crate::msg::Msg;
 use fltk::{
     app::{self, Sender},
     button::Button,
-    enums::{Align, Event, Key, Shortcut},
+    enums::{Align, Color, Event, Font, FrameType, Key, Shortcut},
     frame::Frame,
     group::{Flex, Tabs},
     image::SvgImage,
@@ -71,12 +72,16 @@ impl MainWindow {
         });
 
         let mut col = Flex::default_fill().column();
-        col.set_margin(4);
+        col.set_margin(8);
 
         let mut tabs = Tabs::default_fill();
+        tabs.set_frame(FrameType::FlatBox);
+        tabs.set_selection_color(Color::Background);
         let containers = ContainersTab::new(s);
         let images = ImagesTab::new(s);
         tabs.end();
+        tabs.set_callback(highlight_tab);
+        highlight_tab(&mut tabs);
 
         let mut error_panel = Flex::default_fill().column();
         error_panel.set_margin(40);
@@ -98,6 +103,8 @@ impl MainWindow {
 
         let mut status = Frame::default();
         status.set_align(Align::Left | Align::Inside);
+        status.set_label_color(theme::MUTED);
+        status.set_label_size(12);
         col.fixed(&status, 22);
         col.end();
 
@@ -143,4 +150,21 @@ impl MainWindow {
         self.tabs.show();
         self.col.layout();
     }
+}
+
+/// Flat tabs: the selected tab's label is bold and blue, the others grey.
+fn highlight_tab(tabs: &mut Tabs) {
+    let selected = tabs.value().map(|g| g.as_widget_ptr());
+    for i in 0..tabs.children() {
+        if let Some(mut c) = tabs.child(i) {
+            let on = Some(c.as_widget_ptr()) == selected;
+            c.set_label_color(if on { theme::ACCENT } else { theme::MUTED });
+            c.set_label_font(if on {
+                Font::HelveticaBold
+            } else {
+                Font::Helvetica
+            });
+        }
+    }
+    tabs.redraw();
 }

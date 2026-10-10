@@ -48,7 +48,8 @@ fn main() -> ExitCode {
 }
 
 fn run_gui() -> ExitCode {
-    let app = app::App::default().with_scheme(app::Scheme::Gtk);
+    let app = app::App::default();
+    ui::theme::apply();
     let (s, r) = app::channel::<Msg>();
     let mut state = App {
         ui: MainWindow::new(s),

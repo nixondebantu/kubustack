@@ -5,6 +5,7 @@ pub mod dialogs;
 pub mod images_tab;
 pub mod logs_window;
 pub mod main_window;
+pub mod theme;
 
 use crate::format;
 use fltk::{
@@ -30,14 +31,34 @@ pub fn column_widths(total: i32, fractions: &[f32]) -> Vec<i32> {
 /// Non-selectable bold header line above a list. `titles` are tab-separated.
 pub fn header(columns: &[i32], titles: &[&str]) -> Browser {
     let mut h = Browser::default();
-    h.set_column_widths(columns);
+    h.set_column_widths(&theme::with_pad(columns));
     h.set_has_scrollbar(BrowserScrollbar::None);
     h.set_frame(FrameType::FlatBox);
     h.set_color(Color::Background);
+    h.set_text_size(12);
     h.clear_visible_focus();
-    let line: Vec<String> = titles.iter().map(|t| format!("@b@.{t}")).collect();
-    h.add(&line.join("\t"));
+    let line: Vec<String> = titles
+        .iter()
+        .map(|t| format!("@b@C{}@.{t}", theme::MUTED.bits()))
+        .collect();
+    h.add(&format!(" \t{}", line.join("\t")));
     h
+}
+
+/// Styles a list: white with a thin border, accent selection.
+pub fn style_list(list: &mut HoldBrowser, columns: &[i32]) {
+    list.set_frame(FrameType::ThinDownBox);
+    list.set_color(theme::SURFACE);
+    list.set_selection_color(theme::ACCENT);
+    list.set_column_widths(&theme::with_pad(columns));
+}
+
+/// Sets the column widths of a list and its header.
+pub fn set_columns(header: &mut Browser, list: &mut HoldBrowser, columns: &[i32]) {
+    let padded = theme::with_pad(columns);
+    header.set_column_widths(&padded);
+    header.redraw();
+    list.set_column_widths(&padded);
 }
 
 /// Replaces a list's lines, keeping its scroll position. Shows a grey `empty` line when there
@@ -46,18 +67,18 @@ pub fn fill(list: &mut HoldBrowser, lines: &[String], empty: &str) {
     let scroll = list.position();
     list.clear();
     if lines.is_empty() {
-        list.add(empty);
+        list.add(&format!("{}{empty}", theme::ROW));
         list.deactivate();
     } else {
         list.activate();
         for l in lines {
-            list.add(l);
+            list.add(&format!("{}{l}", theme::ROW));
         }
     }
     list.set_position(scroll);
     // FLTK doesn't clamp the position; if the list shrank below it, show the last lines.
     let n = list.size();
-    if !(1..=n).any(|line| list.displayed(line)) {
+    if scroll > 0 && !(1..=n).any(|line| list.displayed(line)) {
         list.bottom_line(n);
     }
 }

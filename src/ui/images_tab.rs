@@ -52,11 +52,13 @@ impl ImagesTab {
     /// Builds the tab inside the current group (the `Tabs`).
     pub fn new(s: Sender<Msg>) -> Self {
         let mut col = Flex::default_fill().column().with_label("Images");
-        col.set_margin(4);
+        col.set_margin(8);
+        col.set_pad(6);
 
         let mut buttons = Flex::default().row();
         let mut remove = Button::default().with_label("Remove");
         remove.set_callback(move |_| s.send(Msg::RemoveImage));
+        remove.set_label_color(super::theme::RED);
         remove.deactivate();
         buttons.fixed(&remove, 80);
         Frame::default();
@@ -67,14 +69,14 @@ impl ImagesTab {
         refresh.set_callback(move |_| s.send(Msg::Refresh));
         buttons.fixed(&refresh, 90);
         buttons.end();
-        col.fixed(&buttons, 28);
+        col.fixed(&buttons, 30);
 
         let widths = super::column_widths(880, &COLUMNS);
         let header = super::header(&widths, &["REPOSITORY:TAG", "IMAGE ID", "SIZE", "CREATED"]);
         col.fixed(&header, 22);
 
         let mut list = HoldBrowser::default();
-        list.set_column_widths(&widths);
+        super::style_list(&mut list, &widths);
         list.set_callback(move |_| s.send(Msg::ImageSelected));
         col.end();
 
@@ -96,9 +98,7 @@ impl ImagesTab {
     /// Redraws the rows, fitting cells to the current column widths.
     pub fn render(&mut self) {
         let widths = super::column_widths(self.list.w(), &COLUMNS);
-        self.header.set_column_widths(&widths);
-        self.header.redraw();
-        self.list.set_column_widths(&widths);
+        super::set_columns(&mut self.header, &mut self.list, &widths);
         let now = format::now();
         super::measure_with(&self.list);
         let lines: Vec<String> = self

@@ -346,8 +346,9 @@ them, including edge cases (null `RepoTags`, no ports, IPv4+IPv6 duplicate ports
 - Window X class `kubustack` (matches `StartupWMClass` in the desktop entry).
 - Window icon from the embedded `assets/kubustack.svg` via `fltk::image::SvgImage`
   (`include_str!`), so no extra files are needed at runtime.
-- Plain FLTK scheme (`Gtk` or `Gleam`, pick whichever looks cleaner in the spike), system
-  default fonts, no images in lists.
+- Flat look drawn by FLTK itself (`src/ui/theme.rs`): `Base` scheme, light palette with the
+  icon's blue as accent, rounded borders replacing raised/sunken boxes, taller list rows,
+  a coloured status dot, dark logs console. System default fonts, no images in lists.
 - Layout: `Tabs` filling the window above a one-line status bar. Each tab has a button row
   on top and a list filling the rest. Use `fltk::group::Flex` for layout.
 
@@ -596,5 +597,6 @@ remote hosts, settings file.
 | 30 | Exec events | Ignored | Health checks emit `exec_*` events every few seconds; refreshing on them would break the zero-idle-CPU goal |
 | 31 | Auto-recover | Events reconnect restores the connection | When Docker comes back, the listener notices first, so the error panel clears without pressing Retry |
 | 32 | Column widths | Fractions of the list width, re-fitted on window resize | Columns use the space at any window size; the last column (Created) takes the rest |
+| 33 | Look (replaces #9, #22) | Custom flat theme on FLTK's `Base` scheme via box-type callbacks and palette | Owner found the stock schemes dated. Costs +17 KB binary, no new crates, same RAM/CPU; a different toolkit would cost megabytes |
 | — | M8 measurements | **macOS** (arm64, OrbStack, 18 containers): binary 1.34 MB; idle CPU ~0% (0.06 s over 30 s); first populated list 380–580 ms, of which ~250 ms is OrbStack answering the three API calls; RSS not comparable. **Linux** (50 containers, `ldd`, RSS, startup): _pending, owner measures_ | Measured during M8 |
 | — | Spike results | **Linux** (Mint, X11, x86_64, fltk 1.5.23): default build 1.18 MB stripped; `ldd` lists 46 stock desktop libs (X11/Xft/fontconfig/freetype, pango/cairo/harfbuzz/glib), no extras. `no-pango` build: 1.20 MB, 25 libs, RSS 8.8 MB, CPU 0.1% (lifetime average incl. startup). Default-build RSS not captured, re-measured in M8. **macOS** (arm64): 1.06 MB, idle CPU 0.0% | Measured during M1 |

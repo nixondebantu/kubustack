@@ -1,11 +1,12 @@
 //! Logs window for a single container.
 
+use super::theme;
 use crate::format;
 use crate::msg::Msg;
 use fltk::{
     app::Sender,
     button::{Button, CheckButton},
-    enums::Font,
+    enums::{Font, FrameType},
     frame::Frame,
     group::Flex,
     prelude::*,
@@ -50,12 +51,15 @@ impl LogsWindow {
         win.set_callback(move |_| s.send(Msg::LogClose { window: id }));
 
         let mut col = Flex::default_fill().column();
-        col.set_margin(4);
+        col.set_margin(8);
         let buf = TextBuffer::default();
         let mut display = TextDisplay::default();
         display.set_buffer(buf.clone());
         display.set_text_font(Font::Courier);
         display.set_text_size(13);
+        display.set_color(theme::CONSOLE_BG);
+        display.set_text_color(theme::CONSOLE_FG);
+        display.set_frame(FrameType::FlatBox);
 
         let mut row = Flex::default().row();
         let mut follow = CheckButton::default().with_label("Follow");
