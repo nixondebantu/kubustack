@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=KUBUSTACK
+GenericName=Docker Manager
+Comment=Lightweight viewer and manager for Docker containers and images
+Exec=/home/USER/.local/bin/kubustack
+Icon=kubustack
+Terminal=false
+Categories=Development;Utility;
+Keywords=docker;container;image;podman;
+StartupWMClass=kubustack

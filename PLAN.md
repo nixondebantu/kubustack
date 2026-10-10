@@ -158,14 +158,15 @@ ends its thread (check with `top -H -p <pid>`).
 
 ## M9 — Packaging, release, and docs
 
-- [ ] Final `assets/kubustack.svg` icon [§10.5] and reference `assets/kubustack.desktop` [§10.4]
-- [ ] `scripts/install.sh` [§10.2] and `scripts/uninstall.sh` [§10.3]; check both with
-      `shellcheck` if it is installed
-- [ ] `.github/workflows/release.yml` [§10.1]
-- [ ] `README.md`: description, screenshot placeholder, install one-liner, manual install,
+- [x] Final `assets/kubustack.svg` icon [§10.5] and reference `assets/kubustack.desktop` [§10.4]
+- [x] `scripts/install.sh` [§10.2] and `scripts/uninstall.sh` [§10.3]; check both with
+      `shellcheck` if it is installed (not installed locally: CI runs it; tested under busybox
+      `sh` in Alpine against a fake release)
+- [x] `.github/workflows/release.yml` [§10.1]
+- [x] `README.md`: description, screenshot placeholder, install one-liner, manual install,
       uninstall, usage, Podman/rootless notes, docker group fix, build from source,
       supported systems, license
-- [ ] Run the manual test checklist below and fix issues
+- [ ] Run the manual test checklist below and fix issues _(owner, on Linux)_
 - [ ] With user approval: bump to `0.1.0` if needed, tag `v0.1.0`, push, confirm the release
       contains the tarball and `SHA256SUMS`
 

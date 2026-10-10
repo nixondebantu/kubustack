@@ -1,0 +1,45 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check tag matches Cargo.toml version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)
+          if [ "$tag" != "$version" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match Cargo.toml version $version"
+            exit 1
+          fi
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake git pkg-config \
+            libx11-dev libxext-dev libxft-dev libxinerama-dev libxcursor-dev \
+            libxrender-dev libxfixes-dev libpango1.0-dev libgl1-mesa-dev libglu1-mesa-dev
+      - name: Toolchain
+        run: rustup update stable && rustup default stable
+      - run: cargo test
+      - run: cargo build --release
+      - name: Package
+        run: |
+          mkdir dist
+          cp target/release/kubustack assets/kubustack.svg assets/kubustack.desktop LICENSE README.md dist/
+          tar -czf kubustack-x86_64-linux.tar.gz -C dist \
+            kubustack kubustack.svg kubustack.desktop LICENSE README.md
+          sha256sum kubustack-x86_64-linux.tar.gz > SHA256SUMS
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" kubustack-x86_64-linux.tar.gz SHA256SUMS \
+            --title "KUBUSTACK $GITHUB_REF_NAME" --generate-notes

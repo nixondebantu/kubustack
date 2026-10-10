@@ -24,6 +24,7 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+      - run: shellcheck scripts/*.sh
       - run: cargo fmt --check
       - run: cargo clippy --all-targets -- -D warnings
       - run: cargo test
