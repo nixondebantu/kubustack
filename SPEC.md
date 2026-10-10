@@ -552,7 +552,7 @@ throwaway `kubustack-test-*` containers.
 - [ ] App shows the permission error and fix when the user is not in the `docker` group.
 - [ ] Lists update within ~1 s of `docker run` / `docker rm` in a terminal, with no polling.
 - [ ] Closing a following logs window ends its thread (verify with `ps -T` or `top -H`).
-- [ ] CI is green; tagging `v0.1.0` produces a release with tarball and checksums.
+- [x] CI is green; tagging `v0.1.0` produces a release with tarball and checksums.
 - [ ] The one-line installer works on a second machine and the app appears in the app menu.
 
 ## 13. Future (v2 candidates)
