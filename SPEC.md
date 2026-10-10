@@ -574,4 +574,6 @@ remote hosts, settings file.
 | 18 | Versioning | Semver from 0.1.0, tag triggers release | Automated releases |
 | 19 | Testing | Unit tests with fixtures + manual checklist | GUI is hard to automate |
 | 20 | Name | KUBUSTACK | No exact-match project found (Oct 2026); a similar name, Kubestack (a Kubernetes Terraform framework), exists. Accepted by owner unless changed. |
-| — | Spike results | _(filled in during Milestone 1)_ | |
+| 21 | Dev machine | macOS arm64 (OrbStack Docker); Linux checks run by owner later | Owner's machine. FLTK runs on macOS, so UI work is testable; Linux-only checks (`ldd`, Wayland, size/RSS budget) need a Linux desktop |
+| 22 | FLTK scheme | `Gtk` | Flatter and cleaner than `Gleam` (whose gradient borders look dated) in the M1 spike screenshots |
+| — | Spike results (macOS, provisional) | fltk 1.5.23 default features. Release binary 1.06 MB (arm64 Mach-O). Idle CPU 0.0% (0.02 s CPU over 30 s). RSS ~69 MB, not comparable with the Linux budget because macOS counts shared AppKit pages | Linux numbers, `ldd`, `use-wayland` and `no-pango` evaluation: _pending, owner tests on Linux_ |

@@ -6,6 +6,13 @@ mod msg;
 mod ui;
 mod worker;
 
+use fltk::app;
+
 fn main() {
-    println!("kubustack {}: work in progress", env!("CARGO_PKG_VERSION"));
+    let app = app::App::default().with_scheme(app::Scheme::Gtk);
+    ui::main_window::show();
+    // ponytail: plain app.run() until M3 adds the channel-draining loop.
+    if let Err(e) = app.run() {
+        eprintln!("kubustack: {e}");
+    }
 }
