@@ -147,9 +147,9 @@ ends its thread (check with `top -H -p <pid>`).
 - [x] Column widths adapt sensibly when the window is resized
 - [x] Review every user-facing message for plain, helpful wording
 - [ ] Re-measure binary size, idle RSS with ~50 containers, idle CPU, startup time against
-      [§3]; record in the Decision Log. Fix anything over budget. _(macOS done; Linux pending,
-      owner measures)_
-- [ ] `ldd` check: only standard desktop libraries _(Linux, owner; M1 spike already clean)_
+      [§3]; record in the Decision Log. Fix anything over budget. _(macOS done; Linux RSS, CPU,
+      threads done; Linux startup time pending)_
+- [x] `ldd` check: only standard desktop libraries
 - [x] Remove dead code; clippy clean
 
 **Done when:** all [§3] budgets are met and recorded.

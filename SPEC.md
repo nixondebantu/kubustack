@@ -42,7 +42,7 @@ and installation by copying a single binary.
 | Idle memory (RSS, 50 containers listed) | ≤ 30 MB |
 | Idle CPU | ~0%: no timers or polling while nothing happens |
 | Cold start to first populated list | < 500 ms |
-| Threads while idle | Main thread + events listener only |
+| Threads while idle | Main thread + events listener only (on Linux, plus one idle thread started by the system text stack; decision log, M8 measurements) |
 
 The Milestone 1 spike measures real numbers and records them in the Decision Log (§14).
 
@@ -601,5 +601,5 @@ remote hosts, settings file.
 | 33 | Look (replaces #9, #22) | Custom flat theme on FLTK's `Base` scheme via box-type callbacks and palette | Owner found the stock schemes dated. Costs +17 KB binary, no new crates, same RAM/CPU; a different toolkit would cost megabytes |
 | 34 | Dark mode | Follow the desktop at startup: `KUBUSTACK_THEME` override, `GTK_THEME`, freedesktop portal `color-scheme` via `gdbus`, then a `*dark*` GTK theme name via `gsettings` | No D-Bus crate; one or two short commands at startup (+34 KB binary for `std::process`). No live switching, restart instead. The env var is not a config file |
 | 35 | Icon | Owner's hexagon-cube logo, hand-traced to a 447-byte SVG on a dark rounded square | Crisp at any size, works on light and dark panels, no raster image in the binary |
-| — | M8 measurements | **macOS** (arm64, OrbStack, 18 containers): binary 1.34 MB; idle CPU ~0% (0.06 s over 30 s); first populated list 380–580 ms, of which ~250 ms is OrbStack answering the three API calls; RSS not comparable. **Linux** (50 containers, `ldd`, RSS, startup): _pending, owner measures_ | Measured during M8 |
+| — | M8 measurements | **macOS** (arm64, OrbStack, 18 containers): binary 1.34 MB; idle CPU ~0% (0.06 s over 30 s); first populated list 380–580 ms, of which ~250 ms is OrbStack answering the three API calls; RSS not comparable. **Linux** (Mint, X11, x86_64, dark-mode theme build, 50+ containers): RSS 19.4 MB; `ldd` 46 stock desktop libs, same set as the M1 spike; idle CPU 0 ticks on both background threads over 10 s, main thread blocks in `pselect6` with no timeout and wakes only for X11 events (strace showed EnterNotify/MotionNotify from the mouse); 3 threads: main, `events`, and one unnamed thread with 0 CPU that isn't KUBUSTACK's (the Mac debug build shows no leftover Rust threads), most likely GLib/Pango. Startup time: _pending_ | Measured during M8 |
 | — | Spike results | **Linux** (Mint, X11, x86_64, fltk 1.5.23): default build 1.18 MB stripped; `ldd` lists 46 stock desktop libs (X11/Xft/fontconfig/freetype, pango/cairo/harfbuzz/glib), no extras. `no-pango` build: 1.20 MB, 25 libs, RSS 8.8 MB, CPU 0.1% (lifetime average incl. startup). Default-build RSS not captured, re-measured in M8. **macOS** (arm64): 1.06 MB, idle CPU 0.0% | Measured during M1 |
