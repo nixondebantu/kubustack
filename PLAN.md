@@ -30,12 +30,12 @@ See `CLAUDE.md` for rules and `SPEC.md` for details (section numbers in brackets
       "Containers" and "Images" groups, status bar text "Not connected"
 - [x] Embedded SVG window icon (placeholder SVG is fine until M9)
 - [x] Try the `Gtk` and `Gleam` schemes, pick one
-- [ ] Evaluate fltk features using the rule in [§4]: _(Linux, pending owner)_
-  - [ ] Default build: run on the current session, record `ldd` output
-  - [ ] `use-wayland` (if available): does it run on Wayland and on X11? Extra runtime libs?
-  - [ ] `no-pango`: size and `ldd` difference; check UTF-8 text still renders
-- [ ] Measure: stripped release binary size, idle RSS (`ps -o rss= -p <pid>`), idle CPU _(macOS done, Linux pending)_
-- [ ] Record results and chosen features in the [§14] Decision Log "Spike results" row
+- [x] Evaluate fltk features using the rule in [§4]:
+  - [x] Default build: run on the current session, record `ldd` output
+  - [x] `use-wayland` (if available): does it run on Wayland and on X11? Extra runtime libs?
+  - [x] `no-pango`: size and `ldd` difference; check UTF-8 text still renders
+- [x] Measure: stripped release binary size, idle RSS (`ps -o rss= -p <pid>`), idle CPU
+- [x] Record results and chosen features in the [§14] Decision Log "Spike results" row
 
 **Done when:** the empty window runs from a release build, numbers are recorded, and the
 user has approved the feature choice.

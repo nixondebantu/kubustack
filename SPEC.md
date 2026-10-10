@@ -35,7 +35,7 @@ and installation by copying a single binary.
 |---|---|
 | Architecture | x86_64 Linux |
 | C library | glibc ≥ 2.35 (built on Ubuntu 22.04: runs on Ubuntu 22.04+, Debian 12+, Fedora 36+, current Arch, Mint 21+) |
-| Display | X11; Wayland natively if the Milestone 1 spike approves it, otherwise via XWayland |
+| Display | X11; Wayland via XWayland (native Wayland rejected in the M1 spike, see §14 #23) |
 | Docker | Engine API ≥ 1.41 (Docker 20.10+) |
 | Podman | Best effort, through its Docker-compatible socket via `DOCKER_HOST` |
 | Stripped release binary | ≤ 8 MB (expected 3–6 MB) |
@@ -50,7 +50,8 @@ The Milestone 1 spike measures real numbers and records them in the Decision Log
 
 - **Language:** Rust stable, edition 2021.
 - **GUI:** `fltk` (fltk-rs), latest 1.x at implementation time, FLTK statically linked.
-  - Optional features (`use-wayland`, `no-pango`) are decided in Milestone 1 using this rule:
+  - Optional features (`use-wayland`, `no-pango`) were decided in Milestone 1 (§14 #23: neither
+    is enabled) using this rule:
     enable a feature only if the binary still starts on both an X11 and a Wayland session
     and `ldd` shows no runtime libraries beyond those present on a stock desktop install.
 - **JSON:** `serde` (with `derive`) and `serde_json`.
@@ -561,7 +562,7 @@ remote hosts, settings file.
 | 5 | Docker access | Raw HTTP/1.0 over Unix socket, serde_json | No SDK or async runtime |
 | 6 | Refresh | Events stream + debounce + manual Refresh | Zero idle CPU |
 | 7 | Dependencies | Only fltk, serde, serde_json | Size and build speed |
-| 8 | Display server | Decided in Milestone 1 spike | Verify hybrid Wayland support |
+| 8 | Display server | X11, Wayland via XWayland (see #23) | Decided in the Milestone 1 spike |
 | 9 | Look | Plain FLTK scheme, no theming | Minimalism |
 | 10 | Safety | Confirm all destructive actions | Protect user data |
 | 11 | Errors | In-window panel with fix + Retry | No crashes, clear guidance |
@@ -576,4 +577,5 @@ remote hosts, settings file.
 | 20 | Name | KUBUSTACK | No exact-match project found (Oct 2026); a similar name, Kubestack (a Kubernetes Terraform framework), exists. Accepted by owner unless changed. |
 | 21 | Dev machine | macOS arm64 (OrbStack Docker); Linux checks run by owner later | Owner's machine. FLTK runs on macOS, so UI work is testable; Linux-only checks (`ldd`, Wayland, size/RSS budget) need a Linux desktop |
 | 22 | FLTK scheme | `Gtk` | Flatter and cleaner than `Gleam` (whose gradient borders look dated) in the M1 spike screenshots |
-| — | Spike results (macOS, provisional) | fltk 1.5.23 default features. Release binary 1.06 MB (arm64 Mach-O). Idle CPU 0.0% (0.02 s CPU over 30 s). RSS ~69 MB, not comparable with the Linux budget because macOS counts shared AppKit pages | Linux numbers, `ldd`, `use-wayland` and `no-pango` evaluation: _pending, owner tests on Linux_ |
+| 23 | fltk features | Default features only: no `use-wayland`, no `no-pango` | `no-pango` rendered `→` and CJK as boxes (the ports column needs `→`) and was not smaller (1.20 MB vs 1.18 MB). `use-wayland` needs extra build packages and could not be verified on a Wayland session; XWayland covers Wayland desktops |
+| — | Spike results | **Linux** (Mint, X11, x86_64, fltk 1.5.23): default build 1.18 MB stripped; `ldd` lists 46 stock desktop libs (X11/Xft/fontconfig/freetype, pango/cairo/harfbuzz/glib), no extras. `no-pango` build: 1.20 MB, 25 libs, RSS 8.8 MB, CPU 0.1% (lifetime average incl. startup). Default-build RSS not captured, re-measured in M8. **macOS** (arm64): 1.06 MB, idle CPU 0.0% | Measured during M1 |
