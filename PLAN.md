@@ -16,7 +16,7 @@ See `CLAUDE.md` for rules and `SPEC.md` for details (section numbers in brackets
 - [x] `LICENSE` (MIT, copyright holder: nixondebantu), `.gitignore` (`/target`)
 - [x] `.github/workflows/ci.yml` [§10.1]: fmt, clippy, test, release build on `ubuntu-22.04`
 - [x] Minimal `README.md` stub (name, one-line description, "work in progress")
-- [ ] `git init`, first commit. If the `gh` CLI is installed and authenticated, ask the user
+- [x] `git init`, first commit. If the `gh` CLI is installed and authenticated, ask the user
       before creating the GitHub repo `nixondebantu/kubustack` and pushing; otherwise print
       the manual steps.
 
