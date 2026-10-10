@@ -6,7 +6,10 @@ A super-lightweight native Linux desktop app for viewing and managing your Docke
 and images. One small window, one ~1.3 MB binary, no runtime to install, and zero CPU while
 idle: the lists update live from Docker's event stream instead of polling.
 
-<!-- Screenshot: docs/screenshot.png (to be added) -->
+![KUBUSTACK main window](docs/images/screenshot.png)
+
+**New here?** The [user guide](docs/guide.md) walks through every screen with annotated
+screenshots.
 
 ## Features
 
@@ -52,7 +55,8 @@ curl -fsSL https://raw.githubusercontent.com/nixondebantu/kubustack/main/scripts
 
 ## Usage
 
-Launch **KUBUSTACK** from your app menu, or run `kubustack`.
+Launch **KUBUSTACK** from your app menu, or run `kubustack`. For a picture-by-picture tour,
+see the [user guide](docs/guide.md).
 
 | Key | Action |
 |---|---|
